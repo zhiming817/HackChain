@@ -132,6 +132,27 @@ func (c *EventController) GetEventTickets(ctx *gin.Context) {
 	})
 }
 
+// GetTicketsByHolder 获取持有者的所有 NFT 门票
+func (c *EventController) GetTicketsByHolder(ctx *gin.Context) {
+	holder := ctx.Query("holder")
+	if holder == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "holder address is required"})
+		return
+	}
+
+	repo := c.service.GetRepository()
+	tickets, err := repo.GetNFTTicketsByHolder(holder)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"data": tickets,
+	})
+}
+
 // GetSyncStats 获取同步统计
 func (c *EventController) GetSyncStats(ctx *gin.Context) {
 	stats, err := c.service.GetSyncStats()

@@ -9,7 +9,7 @@ import (
 // Event 黑客松活动
 type Event struct {
 	ID               uint      `gorm:"primaryKey" json:"id"`
-	ContractAddress  string    `gorm:"index:idx_contract_event,priority:1" json:"contract_address"` // 合约地址
+	ContractAddress  string    `gorm:"index:idx_contract_event,priority:1" json:"contract_address"`           // 合约地址
 	EventID          string    `gorm:"type:varchar(100);index:idx_contract_event,priority:2" json:"event_id"` // 合约内的事件ID（存储为字符串）
 	Organizer        string    `gorm:"index" json:"organizer"`
 	Title            string    `json:"title"`
@@ -77,9 +77,9 @@ func (Sponsor) TableName() string {
 // NFTTicket NFT 门票
 type NFTTicket struct {
 	ID              uint      `gorm:"primaryKey" json:"id"`
-	ContractAddress string    `gorm:"index:idx_contract_token,priority:1" json:"contract_address"` // NFT合约地址
+	ContractAddress string    `gorm:"index:idx_contract_token,priority:1" json:"contract_address"`           // NFT合约地址
 	TokenID         string    `gorm:"type:varchar(100);index:idx_contract_token,priority:2" json:"token_id"` // Token ID字符串
-	EventID         string    `gorm:"type:varchar(100);index" json:"event_id"` // Event ID字符串
+	EventID         string    `gorm:"type:varchar(100);index" json:"event_id"`                               // Event ID字符串
 	Holder          string    `gorm:"index" json:"holder"`
 	EventTitle      string    `json:"event_title"`
 	Location        string    `json:"location"`

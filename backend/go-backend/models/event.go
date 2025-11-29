@@ -9,7 +9,7 @@ import (
 // Event 黑客松活动
 type Event struct {
 	ID               uint      `gorm:"primaryKey" json:"id"`
-	EventID          uint64    `gorm:"uniqueIndex" json:"event_id"`
+	EventID          uint64    `gorm:"index" json:"event_id"`
 	Organizer        string    `gorm:"index" json:"organizer"`
 	Title            string    `json:"title"`
 	Description      string    `gorm:"type:text" json:"description"`

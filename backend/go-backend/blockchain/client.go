@@ -126,6 +126,19 @@ type ContractSponsor struct {
 	SponsoredAt *big.Int
 }
 
+// ContractTicket 对应合约中的 Ticket 结构体
+type ContractTicket struct {
+	TokenID    *big.Int
+	EventID    *big.Int
+	Holder     common.Address
+	EventTitle string
+	Location   string
+	StartTime  *big.Int
+	EndTime    *big.Int
+	Used       bool
+	IssuedAt   *big.Int
+}
+
 // GetEventDetails 从合约获取活动详情
 func (bc *BlockchainClient) GetEventDetails(ctx context.Context, eventID *big.Int) (*ContractEvent, error) {
 	// 合约 ABI 定义 (只包含 getEvent)
@@ -294,6 +307,75 @@ func (bc *BlockchainClient) GetEventSponsors(ctx context.Context, eventID *big.I
 	}
 
 	return sponsors, nil
+}
+
+// GetTicket 从 NFT 合约获取门票详情
+func (bc *BlockchainClient) GetTicket(ctx context.Context, tokenID *big.Int) (*ContractTicket, error) {
+	// NFT 合约 ABI 定义 (getTicket)
+	const contractABI = `[
+		{"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"}],"name":"getTicket","outputs":[{"components":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"uint256","name":"eventId","type":"uint256"},{"internalType":"address","name":"holder","type":"address"},{"internalType":"string","name":"eventTitle","type":"string"},{"internalType":"string","name":"location","type":"string"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"bool","name":"used","type":"bool"},{"internalType":"uint256","name":"issuedAt","type":"uint256"}],"internalType":"struct NFTTicket.Ticket","name":"","type":"tuple"}],"stateMutability":"view","type":"function"}
+	]`
+
+	parsedABI, err := abi.JSON(strings.NewReader(contractABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse ABI: %w", err)
+	}
+
+	// 调用 getTicket
+	data, err := parsedABI.Pack("getTicket", tokenID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack getTicket: %w", err)
+	}
+
+	msg := ethereum.CallMsg{
+		To:   &bc.nftTicketAddress,
+		Data: data,
+	}
+	result, err := bc.httpClient.CallContract(ctx, msg, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call getTicket: %w", err)
+	}
+
+	// 使用 Unpack 解析 tuple 返回值
+	unpacked, err := parsedABI.Unpack("getTicket", result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack ticket: %w", err)
+	}
+
+	if len(unpacked) == 0 {
+		return nil, fmt.Errorf("no data returned from getTicket")
+	}
+
+	// 从 unpacked 结果中提取字段
+	ticketData, ok := unpacked[0].(struct {
+		TokenId    *big.Int       `json:"tokenId"`
+		EventId    *big.Int       `json:"eventId"`
+		Holder     common.Address `json:"holder"`
+		EventTitle string         `json:"eventTitle"`
+		Location   string         `json:"location"`
+		StartTime  *big.Int       `json:"startTime"`
+		EndTime    *big.Int       `json:"endTime"`
+		Used       bool           `json:"used"`
+		IssuedAt   *big.Int       `json:"issuedAt"`
+	})
+
+	if !ok {
+		return nil, fmt.Errorf("failed to convert ticket data")
+	}
+
+	ticket := &ContractTicket{
+		TokenID:    ticketData.TokenId,
+		EventID:    ticketData.EventId,
+		Holder:     ticketData.Holder,
+		EventTitle: ticketData.EventTitle,
+		Location:   ticketData.Location,
+		StartTime:  ticketData.StartTime,
+		EndTime:    ticketData.EndTime,
+		Used:       ticketData.Used,
+		IssuedAt:   ticketData.IssuedAt,
+	}
+
+	return ticket, nil
 }
 
 // SubscribeToLogs 订阅合约事件日志

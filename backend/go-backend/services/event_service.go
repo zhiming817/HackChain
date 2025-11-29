@@ -77,6 +77,7 @@ func (s *EventService) processLog(vLog types.Log) {
 	participantRegisteredSig := crypto.Keccak256Hash([]byte("ParticipantRegistered(uint256,address)"))
 	participantCheckedInSig := crypto.Keccak256Hash([]byte("ParticipantCheckedIn(uint256,address)"))
 	sponsorAddedSig := crypto.Keccak256Hash([]byte("SponsorAdded(uint256,address,uint256)"))
+	ticketIssuedSig := crypto.Keccak256Hash([]byte("TicketIssued(uint256,address,uint256)"))
 
 	// 根据事件类型处理
 	switch vLog.Topics[0] {
@@ -88,8 +89,10 @@ func (s *EventService) processLog(vLog types.Log) {
 		s.handleParticipantCheckedIn(vLog)
 	case sponsorAddedSig:
 		s.handleSponsorAdded(vLog)
+	case ticketIssuedSig:
+		s.handleTicketIssued(vLog)
 	default:
-		log.Printf("⚠️ Unknown event signature: %s", vLog.Topics[0].Hex())
+		log.Printf("⚠️ Unknown event: %s", vLog.Topics[0].Hex())
 	}
 }
 
@@ -495,4 +498,58 @@ func (s *EventService) GetSyncStats() (map[string]interface{}, error) {
 		"sponsors":     sponsorCount,
 		"tickets":      ticketCount,
 	}, nil
+}
+
+// handleTicketIssued 处理 TicketIssued 事件
+func (s *EventService) handleTicketIssued(vLog types.Log) {
+	log.Println("🎫 Detected TicketIssued event")
+
+	if len(vLog.Topics) < 4 {
+		log.Printf("⚠️ Invalid TicketIssued event topics length: %d", len(vLog.Topics))
+		return
+	}
+
+	// Topic[1] is eventId (uint256)
+	eventID := new(big.Int).SetBytes(vLog.Topics[1].Bytes())
+	// Topic[2] is participant/holder address
+	holderAddr := common.BytesToAddress(vLog.Topics[2].Bytes())
+	// Topic[3] is tokenId (uint256)
+	tokenID := new(big.Int).SetBytes(vLog.Topics[3].Bytes())
+
+	log.Printf("🆔 Event ID: %s, Holder: %s, Token ID: %s", eventID.String(), holderAddr.Hex(), tokenID.String())
+
+	// 从 NFT 合约获取门票详细信息
+	bc := s.getBlockchainClient()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	ticket, err := bc.GetTicket(ctx, tokenID)
+	if err != nil {
+		log.Printf("❌ Failed to get ticket details from contract: %v", err)
+		s.CreateSyncLog("ticket_issued", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", err.Error())
+		return
+	}
+
+	// 转换为数据库模型
+	nftTicket := &models.NFTTicket{
+		TokenID:    ticket.TokenID.Uint64(),
+		EventID:    ticket.EventID.Uint64(),
+		Holder:     ticket.Holder.Hex(),
+		EventTitle: ticket.EventTitle,
+		Location:   ticket.Location,
+		StartTime:  ticket.StartTime.Int64(),
+		EndTime:    ticket.EndTime.Int64(),
+		Used:       ticket.Used,
+		IssuedAt:   ticket.IssuedAt.Int64(),
+	}
+
+	// 保存到数据库
+	if err := s.repo.GetDB().Create(nftTicket).Error; err != nil {
+		log.Printf("❌ Failed to save NFT ticket: %v", err)
+		s.CreateSyncLog("ticket_issued", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", err.Error())
+		return
+	}
+
+	log.Printf("✅ NFT Ticket saved: Token ID %d for event %d, holder %s", nftTicket.TokenID, nftTicket.EventID, nftTicket.Holder)
+	s.CreateSyncLog("ticket_issued", vLog.BlockNumber, vLog.TxHash.Hex(), "success", fmt.Sprintf("Saved NFT ticket %d", nftTicket.TokenID))
 }

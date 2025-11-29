@@ -17,8 +17,8 @@ type Config struct {
 	DBName     string
 
 	// Blockchain
-	SomniaRPCURL             string
-	SomniaWSURL              string
+	MonadRPCURL              string
+	MonadWSURL               string
 	HackathonContractAddress string
 	NFTTicketContractAddress string
 
@@ -46,8 +46,8 @@ func LoadConfig() *Config {
 		DBName:     getEnv("DB_NAME", "hackathon"),
 
 		// Blockchain
-		SomniaRPCURL:             getEnv("SOMNIA_RPC_URL", "https://dream-rpc.somnia.network"),
-		SomniaWSURL:              getEnv("SOMNIA_WS_URL", "wss://dream-rpc.somnia.network/ws"),
+		MonadRPCURL:              getEnv("MONAD_RPC_URL", "https://testnet-rpc.monad.xyz"),
+		MonadWSURL:               getEnv("MONAD_WS_URL", "wss://testnet-rpc.monad.xyz"),
 		HackathonContractAddress: getEnv("HACKATHON_CONTRACT_ADDRESS", ""),
 		NFTTicketContractAddress: getEnv("NFT_TICKET_CONTRACT_ADDRESS", ""),
 

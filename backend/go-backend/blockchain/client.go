@@ -28,13 +28,13 @@ var BlockchainClientInstance *BlockchainClient
 
 func Init(cfg *config.Config) error {
 	// 连接 HTTP RPC
-	httpClient, err := ethclient.Dial(cfg.SomniaRPCURL)
+	httpClient, err := ethclient.Dial(cfg.MonadRPCURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to HTTP RPC: %w", err)
 	}
 
 	// 连接 WebSocket RPC
-	wsClient, err := ethclient.Dial(cfg.SomniaWSURL)
+	wsClient, err := ethclient.Dial(cfg.MonadWSURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to WebSocket RPC: %w", err)
 	}

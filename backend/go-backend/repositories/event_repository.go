@@ -67,6 +67,11 @@ func (r *EventRepository) CreateParticipant(participant *models.Participant) err
 	return r.db.Create(participant).Error
 }
 
+// UpdateParticipant 更新参与者
+func (r *EventRepository) UpdateParticipant(participant *models.Participant) error {
+	return r.db.Save(participant).Error
+}
+
 // GetParticipantsByEvent 获取活动的所有参与者
 func (r *EventRepository) GetParticipantsByEvent(eventID uint64) ([]models.Participant, error) {
 	var participants []models.Participant

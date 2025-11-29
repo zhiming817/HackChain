@@ -109,6 +109,23 @@ type ContractEvent struct {
 	CreatedAt        *big.Int
 }
 
+// ContractParticipant 对应合约中的 Participant 结构体
+type ContractParticipant struct {
+	Wallet       common.Address
+	Name         string
+	RegisteredAt *big.Int
+	CheckedIn    bool
+	CheckInTime  *big.Int
+}
+
+// ContractSponsor 对应合约中的 Sponsor 结构体
+type ContractSponsor struct {
+	Wallet      common.Address
+	Name        string
+	Amount      *big.Int
+	SponsoredAt *big.Int
+}
+
 // GetEventDetails 从合约获取活动详情
 func (bc *BlockchainClient) GetEventDetails(ctx context.Context, eventID *big.Int) (*ContractEvent, error) {
 	// 合约 ABI 定义 (只包含 getEvent)
@@ -145,6 +162,138 @@ func (bc *BlockchainClient) GetEventDetails(ctx context.Context, eventID *big.In
 	}
 
 	return &out.Event, nil
+}
+
+// GetEventParticipants 从合约获取活动的所有参与者
+func (bc *BlockchainClient) GetEventParticipants(ctx context.Context, eventID *big.Int) ([]ContractParticipant, error) {
+	// 合约 ABI 定义 (getParticipantCount 和 eventParticipants)
+	const contractABI = `[
+		{"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"}],"name":"getParticipantCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+		{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"eventParticipants","outputs":[{"internalType":"address","name":"wallet","type":"address"},{"internalType":"string","name":"name","type":"string"},{"internalType":"uint256","name":"registeredAt","type":"uint256"},{"internalType":"bool","name":"checkedIn","type":"bool"},{"internalType":"uint256","name":"checkInTime","type":"uint256"}],"stateMutability":"view","type":"function"}
+	]`
+
+	parsedABI, err := abi.JSON(strings.NewReader(contractABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse ABI: %w", err)
+	}
+
+	// 首先获取参与者数量
+	countData, err := parsedABI.Pack("getParticipantCount", eventID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack getParticipantCount: %w", err)
+	}
+
+	msg := ethereum.CallMsg{
+		To:   &bc.hackathonAddress,
+		Data: countData,
+	}
+	countResult, err := bc.httpClient.CallContract(ctx, msg, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call getParticipantCount: %w", err)
+	}
+
+	var count *big.Int
+	err = parsedABI.UnpackIntoInterface(&count, "getParticipantCount", countResult)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack count: %w", err)
+	}
+
+	// 获取每个参与者的详细信息
+	participants := make([]ContractParticipant, 0, count.Int64())
+	for i := int64(0); i < count.Int64(); i++ {
+		data, err := parsedABI.Pack("eventParticipants", eventID, big.NewInt(i))
+		if err != nil {
+			log.Printf("Failed to pack eventParticipants for index %d: %v", i, err)
+			continue
+		}
+
+		msg := ethereum.CallMsg{
+			To:   &bc.hackathonAddress,
+			Data: data,
+		}
+		result, err := bc.httpClient.CallContract(ctx, msg, nil)
+		if err != nil {
+			log.Printf("Failed to call eventParticipants for index %d: %v", i, err)
+			continue
+		}
+
+		var participant ContractParticipant
+		err = parsedABI.UnpackIntoInterface(&participant, "eventParticipants", result)
+		if err != nil {
+			log.Printf("Failed to unpack participant for index %d: %v", i, err)
+			continue
+		}
+
+		participants = append(participants, participant)
+	}
+
+	return participants, nil
+}
+
+// GetEventSponsors 从合约获取活动的所有赞助商
+func (bc *BlockchainClient) GetEventSponsors(ctx context.Context, eventID *big.Int) ([]ContractSponsor, error) {
+	// 合约 ABI 定义 (getSponsorCount 和 eventSponsors)
+	const contractABI = `[
+		{"inputs":[{"internalType":"uint256","name":"_eventId","type":"uint256"}],"name":"getSponsorCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+		{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"eventSponsors","outputs":[{"internalType":"address","name":"wallet","type":"address"},{"internalType":"string","name":"name","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"sponsoredAt","type":"uint256"}],"stateMutability":"view","type":"function"}
+	]`
+
+	parsedABI, err := abi.JSON(strings.NewReader(contractABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse ABI: %w", err)
+	}
+
+	// 首先获取赞助商数量
+	countData, err := parsedABI.Pack("getSponsorCount", eventID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack getSponsorCount: %w", err)
+	}
+
+	msg := ethereum.CallMsg{
+		To:   &bc.hackathonAddress,
+		Data: countData,
+	}
+	countResult, err := bc.httpClient.CallContract(ctx, msg, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call getSponsorCount: %w", err)
+	}
+
+	var count *big.Int
+	err = parsedABI.UnpackIntoInterface(&count, "getSponsorCount", countResult)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack count: %w", err)
+	}
+
+	// 获取每个赞助商的详细信息
+	sponsors := make([]ContractSponsor, 0, count.Int64())
+	for i := int64(0); i < count.Int64(); i++ {
+		data, err := parsedABI.Pack("eventSponsors", eventID, big.NewInt(i))
+		if err != nil {
+			log.Printf("Failed to pack eventSponsors for index %d: %v", i, err)
+			continue
+		}
+
+		msg := ethereum.CallMsg{
+			To:   &bc.hackathonAddress,
+			Data: data,
+		}
+		result, err := bc.httpClient.CallContract(ctx, msg, nil)
+		if err != nil {
+			log.Printf("Failed to call eventSponsors for index %d: %v", i, err)
+			continue
+		}
+
+		var sponsor ContractSponsor
+		err = parsedABI.UnpackIntoInterface(&sponsor, "eventSponsors", result)
+		if err != nil {
+			log.Printf("Failed to unpack sponsor for index %d: %v", i, err)
+			continue
+		}
+
+		sponsors = append(sponsors, sponsor)
+	}
+
+	return sponsors, nil
 }
 
 // SubscribeToLogs 订阅合约事件日志

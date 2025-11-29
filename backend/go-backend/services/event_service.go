@@ -72,12 +72,223 @@ func (s *EventService) processLog(vLog types.Log) {
 	// 记录同步日志
 	s.CreateSyncLog("event_subscription", vLog.BlockNumber, vLog.TxHash.Hex(), "received", "")
 
-	// EventCreated(uint256,address,string)
+	// 事件签名
 	eventCreatedSig := crypto.Keccak256Hash([]byte("EventCreated(uint256,address,string)"))
+	participantRegisteredSig := crypto.Keccak256Hash([]byte("ParticipantRegistered(uint256,address)"))
+	participantCheckedInSig := crypto.Keccak256Hash([]byte("ParticipantCheckedIn(uint256,address)"))
+	sponsorAddedSig := crypto.Keccak256Hash([]byte("SponsorAdded(uint256,address,uint256)"))
 
-	if vLog.Topics[0] == eventCreatedSig {
+	// 根据事件类型处理
+	switch vLog.Topics[0] {
+	case eventCreatedSig:
 		s.handleEventCreated(vLog)
+	case participantRegisteredSig:
+		s.handleParticipantRegistered(vLog)
+	case participantCheckedInSig:
+		s.handleParticipantCheckedIn(vLog)
+	case sponsorAddedSig:
+		s.handleSponsorAdded(vLog)
+	default:
+		log.Printf("⚠️ Unknown event signature: %s", vLog.Topics[0].Hex())
 	}
+}
+
+// handleParticipantRegistered 处理 ParticipantRegistered 事件
+func (s *EventService) handleParticipantRegistered(vLog types.Log) {
+	log.Println("👤 Detected ParticipantRegistered event")
+
+	if len(vLog.Topics) < 3 {
+		log.Println("❌ Invalid ParticipantRegistered log: missing topics")
+		return
+	}
+
+	// Topic[1] is eventId (uint256)
+	eventID := new(big.Int).SetBytes(vLog.Topics[1].Bytes())
+	// Topic[2] is participant address
+	participantAddr := common.BytesToAddress(vLog.Topics[2].Bytes())
+
+	log.Printf("🆔 Event ID: %s, Participant: %s", eventID.String(), participantAddr.Hex())
+
+	// 从合约获取参与者详细信息
+	bc := s.getBlockchainClient()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	participants, err := bc.GetEventParticipants(ctx, eventID)
+	if err != nil {
+		log.Printf("❌ Failed to get participant details: %v", err)
+		s.CreateSyncLog("participant_registered", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", err.Error())
+		return
+	}
+
+	// 找到对应的参与者
+	var targetParticipant *blockchain.ContractParticipant
+	for _, p := range participants {
+		if p.Wallet == participantAddr {
+			targetParticipant = &p
+			break
+		}
+	}
+
+	if targetParticipant == nil {
+		log.Printf("❌ Participant not found in contract data")
+		s.CreateSyncLog("participant_registered", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", "participant not found")
+		return
+	}
+
+	// 转换为数据库模型
+	participant := &models.Participant{
+		EventID:      eventID.Uint64(),
+		Wallet:       targetParticipant.Wallet.Hex(),
+		Name:         targetParticipant.Name,
+		RegisteredAt: targetParticipant.RegisteredAt.Int64(),
+		CheckedIn:    targetParticipant.CheckedIn,
+		CheckInTime:  targetParticipant.CheckInTime.Int64(),
+	}
+
+	// 保存到数据库
+	if err := s.repo.CreateParticipant(participant); err != nil {
+		log.Printf("❌ Failed to create participant in DB: %v", err)
+		s.CreateSyncLog("participant_registered", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", err.Error())
+		return
+	}
+
+	// 更新活动的参与者计数
+	event, err := s.repo.GetEventByID(eventID.Uint64())
+	if err == nil {
+		event.ParticipantCount++
+		s.repo.UpdateEvent(event)
+	}
+
+	log.Printf("✅ Participant saved: %s for event %d", participant.Name, participant.EventID)
+	s.CreateSyncLog("participant_registered", vLog.BlockNumber, vLog.TxHash.Hex(), "success", fmt.Sprintf("Saved participant %s", participant.Wallet))
+}
+
+// handleParticipantCheckedIn 处理 ParticipantCheckedIn 事件
+func (s *EventService) handleParticipantCheckedIn(vLog types.Log) {
+	log.Println("✅ Detected ParticipantCheckedIn event")
+
+	if len(vLog.Topics) < 3 {
+		log.Println("❌ Invalid ParticipantCheckedIn log: missing topics")
+		return
+	}
+
+	// Topic[1] is eventId (uint256)
+	eventID := new(big.Int).SetBytes(vLog.Topics[1].Bytes())
+	// Topic[2] is participant address
+	participantAddr := common.BytesToAddress(vLog.Topics[2].Bytes())
+
+	log.Printf("🆔 Event ID: %s, Participant: %s", eventID.String(), participantAddr.Hex())
+
+	// 从合约获取参与者详细信息
+	bc := s.getBlockchainClient()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	participants, err := bc.GetEventParticipants(ctx, eventID)
+	if err != nil {
+		log.Printf("❌ Failed to get participant details: %v", err)
+		s.CreateSyncLog("participant_checked_in", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", err.Error())
+		return
+	}
+
+	// 找到对应的参与者
+	var targetParticipant *blockchain.ContractParticipant
+	for _, p := range participants {
+		if p.Wallet == participantAddr {
+			targetParticipant = &p
+			break
+		}
+	}
+
+	if targetParticipant == nil {
+		log.Printf("❌ Participant not found in contract data")
+		s.CreateSyncLog("participant_checked_in", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", "participant not found")
+		return
+	}
+
+	// 更新数据库中的参与者状态
+	var participant models.Participant
+	if err := s.repo.GetDB().Where("event_id = ? AND wallet = ?", eventID.Uint64(), participantAddr.Hex()).First(&participant).Error; err != nil {
+		log.Printf("❌ Failed to find participant in DB: %v", err)
+		s.CreateSyncLog("participant_checked_in", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", err.Error())
+		return
+	}
+
+	participant.CheckedIn = targetParticipant.CheckedIn
+	participant.CheckInTime = targetParticipant.CheckInTime.Int64()
+
+	if err := s.repo.GetDB().Save(&participant).Error; err != nil {
+		log.Printf("❌ Failed to update participant in DB: %v", err)
+		s.CreateSyncLog("participant_checked_in", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", err.Error())
+		return
+	}
+
+	log.Printf("✅ Participant checked in: %s for event %d", participant.Wallet, participant.EventID)
+	s.CreateSyncLog("participant_checked_in", vLog.BlockNumber, vLog.TxHash.Hex(), "success", fmt.Sprintf("Updated participant %s", participant.Wallet))
+}
+
+// handleSponsorAdded 处理 SponsorAdded 事件
+func (s *EventService) handleSponsorAdded(vLog types.Log) {
+	log.Println("💰 Detected SponsorAdded event")
+
+	if len(vLog.Topics) < 3 {
+		log.Println("❌ Invalid SponsorAdded log: missing topics")
+		return
+	}
+
+	// Topic[1] is eventId (uint256)
+	eventID := new(big.Int).SetBytes(vLog.Topics[1].Bytes())
+	// Topic[2] is sponsor address
+	sponsorAddr := common.BytesToAddress(vLog.Topics[2].Bytes())
+
+	log.Printf("🆔 Event ID: %s, Sponsor: %s", eventID.String(), sponsorAddr.Hex())
+
+	// 从合约获取赞助商详细信息
+	bc := s.getBlockchainClient()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	sponsors, err := bc.GetEventSponsors(ctx, eventID)
+	if err != nil {
+		log.Printf("❌ Failed to get sponsor details: %v", err)
+		s.CreateSyncLog("sponsor_added", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", err.Error())
+		return
+	}
+
+	// 找到对应的赞助商
+	var targetSponsor *blockchain.ContractSponsor
+	for _, sp := range sponsors {
+		if sp.Wallet == sponsorAddr {
+			targetSponsor = &sp
+			break
+		}
+	}
+
+	if targetSponsor == nil {
+		log.Printf("❌ Sponsor not found in contract data")
+		s.CreateSyncLog("sponsor_added", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", "sponsor not found")
+		return
+	}
+
+	// 转换为数据库模型
+	sponsor := &models.Sponsor{
+		EventID:     eventID.Uint64(),
+		Wallet:      targetSponsor.Wallet.Hex(),
+		Name:        targetSponsor.Name,
+		Amount:      targetSponsor.Amount.String(),
+		SponsoredAt: targetSponsor.SponsoredAt.Int64(),
+	}
+
+	// 保存到数据库
+	if err := s.repo.CreateSponsor(sponsor); err != nil {
+		log.Printf("❌ Failed to create sponsor in DB: %v", err)
+		s.CreateSyncLog("sponsor_added", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", err.Error())
+		return
+	}
+
+	log.Printf("✅ Sponsor saved: %s for event %d (Amount: %s)", sponsor.Name, sponsor.EventID, sponsor.Amount)
+	s.CreateSyncLog("sponsor_added", vLog.BlockNumber, vLog.TxHash.Hex(), "success", fmt.Sprintf("Saved sponsor %s", sponsor.Wallet))
 }
 
 // handleEventCreated 处理 EventCreated 事件

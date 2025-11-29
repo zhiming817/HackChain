@@ -23,6 +23,7 @@ export const HACKATHON_ABI = [
     inputs: [
       { internalType: 'uint256', name: '_eventId', type: 'uint256' },
       { internalType: 'address', name: '_participant', type: 'address' },
+      { internalType: 'uint256', name: '_tokenId', type: 'uint256' },
     ],
     name: 'checkInParticipant',
     outputs: [],

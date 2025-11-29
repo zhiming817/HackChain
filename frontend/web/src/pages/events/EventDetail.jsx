@@ -144,8 +144,11 @@ export default function EventDetail() {
       const contract = new ethers.Contract(contractAddress, HACKATHON_ABI, signer);
 
       // 调用合约的 registerParticipant 方法
+      // 使用 BigInt 确保大数字精度
       console.log('⏳ Sending registration transaction...');
-      const tx = await contract.registerParticipant(event.eventId, participantName);
+      const eventIdBigInt = ethers.toBigInt(event.eventId);
+      console.log('Event ID (BigInt):', eventIdBigInt.toString());
+      const tx = await contract.registerParticipant(eventIdBigInt, participantName);
 
       console.log('✅ Transaction sent:', tx.hash);
 

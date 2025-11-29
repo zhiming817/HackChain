@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import { ethers } from 'ethers';
+import { getProviderAndSigner } from '../../services/walletService.js';
+import { HACKATHON_ABI } from '../../config/contractABI.js';
 import Navbar from '../../layout/Navbar.jsx';
 import Footer from '../../layout/Footer.jsx';
 
@@ -42,9 +45,30 @@ export default function CheckInScanner() {
         return;
       }
 
-      // TODO: Fetch event from contract
-      setEvent(null);
-      setIsAuthorized(false);
+      // 从后端获取活动信息
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/events/${eventId}`;
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch event');
+      }
+      
+      const result = await response.json();
+      
+      if (result.code === 0 && result.data) {
+        const eventData = result.data;
+        setEvent(eventData);
+        
+        // 检查当前用户是否是活动组织者
+        const isOrganizer = eventData.organizer.toLowerCase() === address.toLowerCase();
+        setIsAuthorized(isOrganizer);
+        
+        if (!isOrganizer) {
+          setError('You are not authorized to perform check-ins. Only the event organizer can check in attendees.');
+        }
+      } else {
+        setError('Event not found');
+      }
     } catch (err) {
       console.error('Error loading event:', err);
       setError('Failed to load event details');
@@ -97,17 +121,19 @@ export default function CheckInScanner() {
     try {
       const qrData = JSON.parse(decodedText);
       
-      if (!qrData.ticketId || !qrData.eventId || !qrData.verificationCode) {
-        throw new Error('Invalid QR code format');
+      // 验证必需的字段
+      if (!qrData.tokenId || !qrData.eventId || !qrData.holder) {
+        throw new Error('Invalid QR code format: missing required fields');
       }
 
-      if (qrData.eventId !== eventId) {
+      // 验证事件ID是否匹配
+      if (qrData.eventId.toString() !== eventId) {
         throw new Error('This ticket is for a different event');
       }
 
       setScannedData(qrData);
       stopScanning();
-      handleCheckIn(qrData);
+      // 不自动执行签到，等待用户点击按钮
     } catch (err) {
       console.error('QR code parse error:', err);
       setError(`Invalid QR code: ${err.message}`);
@@ -130,16 +156,58 @@ export default function CheckInScanner() {
 
     try {
       console.log('🎫 Starting check-in process...');
-      // TODO: Implement check-in transaction
-      setSuccess('Check-in successful!');
-      setScannedData(null);
       
-      setTimeout(() => {
-        setSuccess('');
-      }, 3000);
+      // 获取 provider 和 signer
+      const { signer } = await getProviderAndSigner();
+      
+      // 获取合约地址
+      const hackathonContractAddress = import.meta.env.VITE_HACKATHON_CONTRACT_ADDRESS;
+      
+      if (!hackathonContractAddress) {
+        throw new Error('Contract address not configured');
+      }
+
+      // 创建合约实例
+      const hackathonContract = new ethers.Contract(
+        hackathonContractAddress,
+        HACKATHON_ABI,
+        signer
+      );
+
+      console.log('📝 Calling checkInParticipant with tokenId...');
+      // 调用 Hackathon 合约的 checkInParticipant 方法
+      // 合约会自动调用 NFTTicket.useTicket 标记门票为已使用
+      const checkInTx = await hackathonContract.checkInParticipant(
+        qrData.eventId,
+        qrData.holder,
+        qrData.tokenId
+      );
+      
+      console.log('⏳ Waiting for transaction confirmation...');
+      await checkInTx.wait();
+      console.log('✅ Check-in completed, ticket marked as used');
+
+      setSuccess(`✅ Check-in successful for ${qrData.holder.slice(0, 6)}...${qrData.holder.slice(-4)}. Ticket has been marked as used.`);
+      
+      // 不立即清除 scannedData，让用户可以看到信息
     } catch (err) {
       console.error('❌ Check-in error:', err);
-      setError(err.message || 'Failed to check in attendee');
+      
+      let errorMessage = 'Failed to check in attendee';
+      
+      if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+        errorMessage = 'Transaction rejected by user';
+      } else if (err.message?.includes('Participant not registered')) {
+        errorMessage = 'This participant is not registered for the event';
+      } else if (err.message?.includes('Already checked in')) {
+        errorMessage = 'This participant has already been checked in';
+      } else if (err.reason) {
+        errorMessage = `Contract error: ${err.reason}`;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setProcessing(false);
     }
@@ -225,6 +293,11 @@ export default function CheckInScanner() {
                 >
                   🎫 Start Scanning
                 </button>
+                {!isAuthorized && (
+                  <p className="mt-4 text-sm text-red-600 font-medium">
+                    ⚠️ Only the event organizer can perform check-ins
+                  </p>
+                )}
               </div>
             )}
 
@@ -250,6 +323,116 @@ export default function CheckInScanner() {
               <div className="text-center py-12">
                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent mb-4"></div>
                 <p className="text-gray-600 font-medium">Processing check-in...</p>
+              </div>
+            )}
+
+            {scannedData && !processing && !success && (
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-blue-300 p-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span>📋</span>
+                  <span>Scanned Ticket Information</span>
+                </h3>
+                
+                <div className="space-y-3 mb-6">
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-1">Token ID</p>
+                    <p className="text-lg font-bold text-gray-900">#{scannedData.tokenId}</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-1">Event Title</p>
+                    <p className="text-lg font-semibold text-gray-900">{scannedData.eventTitle || 'N/A'}</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-1">Holder Address</p>
+                    <p className="text-sm font-mono text-gray-900 break-all">{scannedData.holder}</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-1">Location</p>
+                    <p className="text-lg text-gray-900">{scannedData.location || 'N/A'}</p>
+                  </div>
+                  
+                  {scannedData.issuedAt && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <p className="text-sm text-gray-500 mb-1">Issued At</p>
+                      <p className="text-lg text-gray-900">
+                        {new Date(scannedData.issuedAt * 1000).toLocaleString('zh-CN')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleCheckIn(scannedData)}
+                    className="flex-1 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-bold hover:shadow-lg transition-all transform hover:scale-105"
+                  >
+                    ✅ 确认签到
+                  </button>
+                  <button
+                    onClick={() => {
+                      setScannedData(null);
+                      setSuccess('');
+                      setError('');
+                    }}
+                    className="px-6 py-4 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition-all"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {scannedData && !processing && success && (
+              <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg border-2 border-green-300 p-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span>✅</span>
+                  <span>Check-In Completed</span>
+                </h3>
+                
+                <div className="space-y-3 mb-6">
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-1">Token ID</p>
+                    <p className="text-lg font-bold text-gray-900">#{scannedData.tokenId}</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-1">Event Title</p>
+                    <p className="text-lg font-semibold text-gray-900">{scannedData.eventTitle || 'N/A'}</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-1">Holder Address</p>
+                    <p className="text-sm font-mono text-gray-900 break-all">{scannedData.holder}</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-1">Location</p>
+                    <p className="text-lg text-gray-900">{scannedData.location || 'N/A'}</p>
+                  </div>
+                  
+                  {scannedData.issuedAt && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <p className="text-sm text-gray-500 mb-1">Issued At</p>
+                      <p className="text-lg text-gray-900">
+                        {new Date(scannedData.issuedAt * 1000).toLocaleString('zh-CN')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    setScannedData(null);
+                    setSuccess('');
+                    setError('');
+                  }}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-bold hover:shadow-lg transition-all"
+                >
+                  Scan Next Ticket
+                </button>
               </div>
             )}
           </div>

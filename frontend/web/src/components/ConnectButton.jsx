@@ -93,6 +93,33 @@ export default function ConnectButton() {
     setBalance(null);
   };
 
+  const handleSwitchAccount = async () => {
+    try {
+      setConnecting(true);
+      // 请求用户选择账户（即使已连接也会弹出选择器）
+      const accounts = await window.ethereum.request({
+        method: 'wallet_requestPermissions',
+        params: [{
+          eth_accounts: {}
+        }]
+      }).then(() => window.ethereum.request({
+        method: 'eth_requestAccounts'
+      }));
+
+      if (accounts.length > 0) {
+        setAddress(accounts[0]);
+        await fetchBalance(accounts[0]);
+      }
+    } catch (err) {
+      console.error('Switch account error:', err);
+      if (err.code !== 4001) { // 4001 是用户取消
+        alert('Failed to switch account: ' + (err.message || 'Unknown error'));
+      }
+    } finally {
+      setConnecting(false);
+    }
+  };
+
   if (address) {
     return (
       <div className="flex items-center space-x-3">
@@ -104,12 +131,22 @@ export default function ConnectButton() {
             {loading ? '加载中...' : `💰 ${formatBalance(balance)} MON`}
           </div>
         </div>
-        <button
-          onClick={handleDisconnect}
-          className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-medium hover:shadow-lg transition-all"
-        >
-          Disconnect
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSwitchAccount}
+            disabled={connecting}
+            className="px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            title="Switch Account"
+          >
+            {connecting ? '...' : '🔄'}
+          </button>
+          <button
+            onClick={handleDisconnect}
+            className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-medium hover:shadow-lg transition-all"
+          >
+            Disconnect
+          </button>
+        </div>
       </div>
     );
   }

@@ -15,7 +15,8 @@ export default function EventDetail() {
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingSponsors, setLoadingSponsors] = useState(false);
-  const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState(''); // 加载事件时的错误
+  const [error, setError] = useState(''); // 注册时的错误
   const [registering, setRegistering] = useState(false);
   const [registerSuccess, setRegisterSuccess] = useState('');
   const [participantName, setParticipantName] = useState('');
@@ -54,12 +55,22 @@ export default function EventDetail() {
           syncedAt: result.data.synced_at,
         };
         setEvent(transformedEvent);
+        // 只在初始加载时设置错误，后续重新加载时保留现有状态
+        if (!event) {
+          setLoadError('');
+        }
       } else {
-        setError('Event not found');
+        // 只在初始加载时设置错误
+        if (!event) {
+          setLoadError('Event not found');
+        }
       }
     } catch (err) {
       console.error('Error loading event:', err);
-      setError('Failed to load event');
+      // 只在初始加载时设置错误
+      if (!event) {
+        setLoadError('Failed to load event');
+      }
     } finally {
       setLoading(false);
     }
@@ -143,34 +154,61 @@ export default function EventDetail() {
       const receipt = await tx.wait();
 
       console.log('✅ Transaction confirmed:', receipt.hash);
-      setRegisterSuccess('✨ Successfully registered for the event!');
+      setRegisterSuccess('✨ Successfully registered for the event! Your NFT ticket will be issued automatically.');
       setParticipantName('');
 
-      // 重新加载活动数据
+      // 重新加载活动数据（仅在成功时）
       setTimeout(() => {
         loadEvent();
       }, 2000);
 
     } catch (err) {
       console.error('❌ Error registering:', err);
+      console.log('Error details:', {
+        code: err.code,
+        message: err.message,
+        reason: err.reason,
+        data: err.data
+      });
       
       let errorMessage = 'Failed to register';
       
       if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
-        errorMessage = 'Transaction rejected by user';
-      } else if (err.message?.includes('Already registered')) {
-        errorMessage = 'You have already registered for this event';
-      } else if (err.message?.includes('Event is full')) {
-        errorMessage = 'Event is full';
-      } else if (err.message?.includes('Event is not active')) {
-        errorMessage = 'Event is not active';
+        errorMessage = '❌ Transaction rejected by user';
+      } else if (err.message?.includes('Already registered') || err.reason?.includes('Already registered')) {
+        errorMessage = '⚠️ You have already registered for this event';
+      } else if (err.message?.includes('Event is full') || err.reason?.includes('Event is full')) {
+        errorMessage = '⚠️ Event is full, no more slots available';
+      } else if (err.message?.includes('Event is not active') || err.reason?.includes('Event is not active')) {
+        errorMessage = '⚠️ This event is not active';
+      } else if (err.data?.message) {
+        // 处理合约 revert 错误
+        const msg = err.data.message;
+        if (msg.includes('Already registered')) {
+          errorMessage = '⚠️ You have already registered for this event';
+        } else if (msg.includes('execution reverted')) {
+          // 提取 revert 原因
+          const match = msg.match(/execution reverted: (.+)/);
+          if (match) {
+            errorMessage = `❌ Contract Error: ${match[1]}`;
+          } else {
+            errorMessage = '❌ Transaction failed: ' + msg;
+          }
+        } else {
+          errorMessage = '❌ ' + msg;
+        }
       } else if (err.reason) {
-        errorMessage = `Contract error: ${err.reason}`;
+        errorMessage = `❌ Contract error: ${err.reason}`;
       } else if (err.message) {
-        errorMessage = err.message;
+        errorMessage = '❌ ' + err.message;
       }
       
       setError(errorMessage);
+      
+      // 滚动到错误提示位置
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // 不要重新加载事件数据，避免触发页面跳转
     } finally {
       setRegistering(false);
     }
@@ -191,13 +229,14 @@ export default function EventDetail() {
     );
   }
 
-  if (error || !event) {
+  if (loadError || !event) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
         <Navbar />
         <div className="max-w-4xl mx-auto px-4 py-20 text-center">
           <div className="text-6xl mb-4">😢</div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Event Not Found</h2>
+          <p className="text-gray-600 mb-8">{loadError || 'The event you are looking for does not exist.'}</p>
           <button
             onClick={() => navigate('/events/browse')}
             className="px-8 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-bold"
@@ -230,14 +269,32 @@ export default function EventDetail() {
 
           <div className="p-8">
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-                <p className="font-medium">❌ {error}</p>
+              <div className="mb-6 p-5 bg-red-50 border-2 border-red-400 rounded-lg text-red-700 animate-pulse">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">❌</span>
+                  <div className="flex-1">
+                    <p className="font-bold text-lg mb-1">Registration Error</p>
+                    <p className="text-red-600">{error}</p>
+                  </div>
+                  <button
+                    onClick={() => setError('')}
+                    className="text-red-400 hover:text-red-600 font-bold text-xl"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             )}
 
             {registerSuccess && (
-              <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700">
-                <p className="font-medium">✅ {registerSuccess}</p>
+              <div className="mb-6 p-5 bg-green-50 border-2 border-green-400 rounded-lg text-green-700">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">✅</span>
+                  <div className="flex-1">
+                    <p className="font-bold text-lg mb-1">Success!</p>
+                    <p className="text-green-600">{registerSuccess}</p>
+                  </div>
+                </div>
               </div>
             )}
 

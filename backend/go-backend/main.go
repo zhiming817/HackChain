@@ -81,7 +81,7 @@ func main() {
 	router.GET("/api/events/:id/participants", eventController.GetEventParticipants)
 	router.GET("/api/events/:id/sponsors", eventController.GetEventSponsors)
 	router.GET("/api/events/:id/tickets", eventController.GetEventTickets)
-	
+
 	// 门票相关 API
 	router.GET("/api/tickets", eventController.GetTicketsByHolder)
 

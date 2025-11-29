@@ -30,7 +30,7 @@ func (r *EventRepository) UpdateEvent(event *models.Event) error {
 }
 
 // GetEventByID 根据链上 ID 获取活动
-func (r *EventRepository) GetEventByID(eventID uint64) (*models.Event, error) {
+func (r *EventRepository) GetEventByID(eventID string) (*models.Event, error) {
 	var event models.Event
 	err := r.db.Where("event_id = ?", eventID).First(&event).Error
 	return &event, err
@@ -58,7 +58,7 @@ func (r *EventRepository) GetEventsByOrganizer(organizer string) ([]models.Event
 }
 
 // DeleteEvent 删除活动
-func (r *EventRepository) DeleteEvent(eventID uint64) error {
+func (r *EventRepository) DeleteEvent(eventID string) error {
 	return r.db.Where("event_id = ?", eventID).Delete(&models.Event{}).Error
 }
 
@@ -73,7 +73,7 @@ func (r *EventRepository) UpdateParticipant(participant *models.Participant) err
 }
 
 // GetParticipantsByEvent 获取活动的所有参与者
-func (r *EventRepository) GetParticipantsByEvent(eventID uint64) ([]models.Participant, error) {
+func (r *EventRepository) GetParticipantsByEvent(eventID string) ([]models.Participant, error) {
 	var participants []models.Participant
 	err := r.db.Where("event_id = ?", eventID).Find(&participants).Error
 	return participants, err
@@ -85,7 +85,7 @@ func (r *EventRepository) CreateSponsor(sponsor *models.Sponsor) error {
 }
 
 // GetSponsorsByEvent 获取活动的所有赞助商
-func (r *EventRepository) GetSponsorsByEvent(eventID uint64) ([]models.Sponsor, error) {
+func (r *EventRepository) GetSponsorsByEvent(eventID string) ([]models.Sponsor, error) {
 	var sponsors []models.Sponsor
 	err := r.db.Where("event_id = ?", eventID).Find(&sponsors).Error
 	return sponsors, err
@@ -97,7 +97,7 @@ func (r *EventRepository) CreateNFTTicket(ticket *models.NFTTicket) error {
 }
 
 // GetNFTTicketByTokenID 根据 Token ID 获取 NFT 门票
-func (r *EventRepository) GetNFTTicketByTokenID(tokenID uint64) (*models.NFTTicket, error) {
+func (r *EventRepository) GetNFTTicketByTokenID(tokenID string) (*models.NFTTicket, error) {
 	var ticket models.NFTTicket
 	err := r.db.Where("token_id = ?", tokenID).First(&ticket).Error
 	return &ticket, err

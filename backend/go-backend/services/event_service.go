@@ -29,6 +29,11 @@ func (s *EventService) GetRepository() *repositories.EventRepository {
 	return s.repo
 }
 
+// getContractAddress 从日志中获取合约地址
+func (s *EventService) getContractAddress(vLog types.Log) string {
+	return vLog.Address.Hex()
+}
+
 // SubscribeEvents 使用 WebSocket 订阅链上事件
 func (s *EventService) SubscribeEvents(ctx context.Context) error {
 	log.Println("🔌 Starting event subscription...")
@@ -52,13 +57,20 @@ func (s *EventService) SubscribeEvents(ctx context.Context) error {
 
 	log.Println("✅ Listening for events...")
 
+	// 添加心跳检测
+	heartbeat := time.NewTicker(30 * time.Second)
+	defer heartbeat.Stop()
+
 	for {
 		select {
 		case err := <-sub.Err():
 			log.Printf("❌ Subscription error: %v", err)
 			return err
 		case vLog := <-logs:
+			log.Printf("📥 Received log from address: %s", vLog.Address.Hex())
 			s.processLog(vLog)
+		case <-heartbeat.C:
+			log.Println("💓 Event listener heartbeat - still listening...")
 		case <-ctx.Done():
 			return nil
 		}
@@ -78,6 +90,7 @@ func (s *EventService) processLog(vLog types.Log) {
 	participantCheckedInSig := crypto.Keccak256Hash([]byte("ParticipantCheckedIn(uint256,address)"))
 	sponsorAddedSig := crypto.Keccak256Hash([]byte("SponsorAdded(uint256,address,uint256)"))
 	ticketIssuedSig := crypto.Keccak256Hash([]byte("TicketIssued(uint256,address,uint256)"))
+	ticketUsedSig := crypto.Keccak256Hash([]byte("TicketUsed(uint256)"))
 
 	// 根据事件类型处理
 	switch vLog.Topics[0] {
@@ -91,6 +104,8 @@ func (s *EventService) processLog(vLog types.Log) {
 		s.handleSponsorAdded(vLog)
 	case ticketIssuedSig:
 		s.handleTicketIssued(vLog)
+	case ticketUsedSig:
+		s.handleTicketUsed(vLog)
 	default:
 		log.Printf("⚠️ Unknown event: %s", vLog.Topics[0].Hex())
 	}
@@ -141,12 +156,13 @@ func (s *EventService) handleParticipantRegistered(vLog types.Log) {
 
 	// 转换为数据库模型
 	participant := &models.Participant{
-		EventID:      eventID.Uint64(),
-		Wallet:       targetParticipant.Wallet.Hex(),
-		Name:         targetParticipant.Name,
-		RegisteredAt: targetParticipant.RegisteredAt.Int64(),
-		CheckedIn:    targetParticipant.CheckedIn,
-		CheckInTime:  targetParticipant.CheckInTime.Int64(),
+		ContractAddress: s.getContractAddress(vLog),
+		EventID:         eventID.String(),
+		Wallet:          targetParticipant.Wallet.Hex(),
+		Name:            targetParticipant.Name,
+		RegisteredAt:    targetParticipant.RegisteredAt.Int64(),
+		CheckedIn:       targetParticipant.CheckedIn,
+		CheckInTime:     targetParticipant.CheckInTime.Int64(),
 	}
 
 	// 保存到数据库
@@ -157,13 +173,13 @@ func (s *EventService) handleParticipantRegistered(vLog types.Log) {
 	}
 
 	// 更新活动的参与者计数
-	event, err := s.repo.GetEventByID(eventID.Uint64())
+	event, err := s.repo.GetEventByID(eventID.String())
 	if err == nil {
 		event.ParticipantCount++
 		s.repo.UpdateEvent(event)
 	}
 
-	log.Printf("✅ Participant saved: %s for event %d", participant.Name, participant.EventID)
+	log.Printf("✅ Participant saved: %s for event %s", participant.Name, participant.EventID)
 	s.CreateSyncLog("participant_registered", vLog.BlockNumber, vLog.TxHash.Hex(), "success", fmt.Sprintf("Saved participant %s", participant.Wallet))
 }
 
@@ -212,7 +228,7 @@ func (s *EventService) handleParticipantCheckedIn(vLog types.Log) {
 
 	// 更新数据库中的参与者状态
 	var participant models.Participant
-	if err := s.repo.GetDB().Where("event_id = ? AND wallet = ?", eventID.Uint64(), participantAddr.Hex()).First(&participant).Error; err != nil {
+	if err := s.repo.GetDB().Where("contract_address = ? AND event_id = ? AND wallet = ?", s.getContractAddress(vLog), eventID.String(), participantAddr.Hex()).First(&participant).Error; err != nil {
 		log.Printf("❌ Failed to find participant in DB: %v", err)
 		s.CreateSyncLog("participant_checked_in", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", err.Error())
 		return
@@ -276,11 +292,12 @@ func (s *EventService) handleSponsorAdded(vLog types.Log) {
 
 	// 转换为数据库模型
 	sponsor := &models.Sponsor{
-		EventID:     eventID.Uint64(),
-		Wallet:      targetSponsor.Wallet.Hex(),
-		Name:        targetSponsor.Name,
-		Amount:      targetSponsor.Amount.String(),
-		SponsoredAt: targetSponsor.SponsoredAt.Int64(),
+		ContractAddress: s.getContractAddress(vLog),
+		EventID:         eventID.String(),
+		Wallet:          targetSponsor.Wallet.Hex(),
+		Name:            targetSponsor.Name,
+		Amount:          targetSponsor.Amount.String(),
+		SponsoredAt:     targetSponsor.SponsoredAt.Int64(),
 	}
 
 	// 保存到数据库
@@ -321,7 +338,8 @@ func (s *EventService) handleEventCreated(vLog types.Log) {
 
 	// 转换为数据库模型
 	event := &models.Event{
-		EventID:          details.Id.Uint64(),
+		ContractAddress:  s.getContractAddress(vLog),
+		EventID:          details.Id.String(), // 转换为字符串
 		Organizer:        details.Organizer.Hex(),
 		Title:            details.Title,
 		Description:      details.Description,
@@ -346,8 +364,8 @@ func (s *EventService) handleEventCreated(vLog types.Log) {
 		}
 	}
 
-	log.Printf("✅ Event saved: %s (ID: %d)", event.Title, event.EventID)
-	s.CreateSyncLog("event_created", vLog.BlockNumber, vLog.TxHash.Hex(), "success", fmt.Sprintf("Saved event %d", event.EventID))
+	log.Printf("✅ Event saved: %s (ID: %s)", event.Title, event.EventID)
+	s.CreateSyncLog("event_created", vLog.BlockNumber, vLog.TxHash.Hex(), "success", fmt.Sprintf("Saved event %s", event.EventID))
 }
 
 // SyncEvents 同步链上的活动数据 (Deprecated: Use SubscribeEvents instead)
@@ -435,7 +453,7 @@ func (s *EventService) GetAllEvents() ([]models.Event, error) {
 }
 
 // GetEventByID 根据 ID 获取活动
-func (s *EventService) GetEventByID(eventID uint64) (*models.Event, error) {
+func (s *EventService) GetEventByID(eventID string) (*models.Event, error) {
 	return s.repo.GetEventByID(eventID)
 }
 
@@ -450,17 +468,17 @@ func (s *EventService) GetEventsByOrganizer(organizer string) ([]models.Event, e
 }
 
 // GetEventParticipants 获取活动的参与者
-func (s *EventService) GetEventParticipants(eventID uint64) ([]models.Participant, error) {
+func (s *EventService) GetEventParticipants(eventID string) ([]models.Participant, error) {
 	return s.repo.GetParticipantsByEvent(eventID)
 }
 
 // GetEventSponsors 获取活动的赞助商
-func (s *EventService) GetEventSponsors(eventID uint64) ([]models.Sponsor, error) {
+func (s *EventService) GetEventSponsors(eventID string) ([]models.Sponsor, error) {
 	return s.repo.GetSponsorsByEvent(eventID)
 }
 
 // GetEventTickets 获取活动的 NFT 门票
-func (s *EventService) GetEventTickets(eventID uint64) ([]models.NFTTicket, error) {
+func (s *EventService) GetEventTickets(eventID string) ([]models.NFTTicket, error) {
 	var tickets []models.NFTTicket
 	err := s.repo.GetDB().Where("event_id = ?", eventID).Find(&tickets).Error
 	return tickets, err
@@ -532,15 +550,16 @@ func (s *EventService) handleTicketIssued(vLog types.Log) {
 
 	// 转换为数据库模型
 	nftTicket := &models.NFTTicket{
-		TokenID:    ticket.TokenID.Uint64(),
-		EventID:    ticket.EventID.Uint64(),
-		Holder:     ticket.Holder.Hex(),
-		EventTitle: ticket.EventTitle,
-		Location:   ticket.Location,
-		StartTime:  ticket.StartTime.Int64(),
-		EndTime:    ticket.EndTime.Int64(),
-		Used:       ticket.Used,
-		IssuedAt:   ticket.IssuedAt.Int64(),
+		ContractAddress: s.getContractAddress(vLog),
+		TokenID:         ticket.TokenID.String(),
+		EventID:         ticket.EventID.String(),
+		Holder:          ticket.Holder.Hex(),
+		EventTitle:      ticket.EventTitle,
+		Location:        ticket.Location,
+		StartTime:       ticket.StartTime.Int64(),
+		EndTime:         ticket.EndTime.Int64(),
+		Used:            ticket.Used,
+		IssuedAt:        ticket.IssuedAt.Int64(),
 	}
 
 	// 保存到数据库
@@ -552,4 +571,54 @@ func (s *EventService) handleTicketIssued(vLog types.Log) {
 
 	log.Printf("✅ NFT Ticket saved: Token ID %d for event %d, holder %s", nftTicket.TokenID, nftTicket.EventID, nftTicket.Holder)
 	s.CreateSyncLog("ticket_issued", vLog.BlockNumber, vLog.TxHash.Hex(), "success", fmt.Sprintf("Saved NFT ticket %d", nftTicket.TokenID))
+}
+
+// handleTicketUsed 处理 TicketUsed 事件
+func (s *EventService) handleTicketUsed(vLog types.Log) {
+	log.Printf("📝 Processing TicketUsed event, Block: %d, TxHash: %s", vLog.BlockNumber, vLog.TxHash.Hex())
+
+	// 检查是否已处理
+	var existingLog models.SyncLog
+	if err := s.repo.GetDB().Where("tx_hash = ? AND event_type = ?", vLog.TxHash.Hex(), "ticket_used").First(&existingLog).Error; err == nil {
+		log.Printf("⏭️  Event already processed: %s", vLog.TxHash.Hex())
+		return
+	}
+
+	// TicketUsed 事件只有一个参数: tokenId (indexed)
+	// Topics[0]: 事件签名
+	// Topics[1]: tokenId
+	if len(vLog.Topics) < 2 {
+		log.Printf("❌ Invalid TicketUsed event: insufficient topics")
+		s.CreateSyncLog("ticket_used", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", "Insufficient topics")
+		return
+	}
+
+	tokenID := new(big.Int).SetBytes(vLog.Topics[1][:])
+	tokenIDStr := tokenID.String()
+	log.Printf("🎫 Token ID from event: %s", tokenIDStr)
+
+	// 查询 NFT ticket (使用合约地址+tokenId定位)
+	var nftTicket models.NFTTicket
+	if err := s.repo.GetDB().Where("contract_address = ? AND token_id = ?", s.getContractAddress(vLog), tokenIDStr).First(&nftTicket).Error; err != nil {
+		log.Printf("❌ Failed to find NFT ticket: %v", err)
+		s.CreateSyncLog("ticket_used", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", fmt.Sprintf("Ticket not found: %s", tokenIDStr))
+		return
+	}
+
+	// 检查是否已经被使用
+	if nftTicket.Used {
+		log.Printf("⚠️  Ticket %s already marked as used", tokenIDStr)
+		s.CreateSyncLog("ticket_used", vLog.BlockNumber, vLog.TxHash.Hex(), "success", fmt.Sprintf("Ticket %s already used", tokenIDStr))
+		return
+	}
+
+	// 更新票据为已使用状态
+	if err := s.repo.GetDB().Model(&nftTicket).Update("used", true).Error; err != nil {
+		log.Printf("❌ Failed to mark ticket as used: %v", err)
+		s.CreateSyncLog("ticket_used", vLog.BlockNumber, vLog.TxHash.Hex(), "failed", err.Error())
+		return
+	}
+
+	log.Printf("✅ Ticket marked as used: Token ID %s", tokenIDStr)
+	s.CreateSyncLog("ticket_used", vLog.BlockNumber, vLog.TxHash.Hex(), "success", fmt.Sprintf("Marked ticket %s as used", tokenIDStr))
 }

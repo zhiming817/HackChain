@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"net/http"
-	"strconv"
 
 	"hackathon-backend/models"
 	"hackathon-backend/services"
@@ -34,8 +33,8 @@ func (c *EventController) GetAllEvents(ctx *gin.Context) {
 
 // GetEventByID 根据 ID 获取活动
 func (c *EventController) GetEventByID(ctx *gin.Context) {
-	eventID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if err != nil {
+	eventID := ctx.Param("id")
+	if eventID == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
 		return
 	}
@@ -74,8 +73,8 @@ func (c *EventController) GetEventsByOrganizer(ctx *gin.Context) {
 
 // GetEventParticipants 获取活动的参与者
 func (c *EventController) GetEventParticipants(ctx *gin.Context) {
-	eventID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if err != nil {
+	eventID := ctx.Param("id")
+	if eventID == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
 		return
 	}
@@ -94,8 +93,8 @@ func (c *EventController) GetEventParticipants(ctx *gin.Context) {
 
 // GetEventSponsors 获取活动的赞助商
 func (c *EventController) GetEventSponsors(ctx *gin.Context) {
-	eventID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if err != nil {
+	eventID := ctx.Param("id")
+	if eventID == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
 		return
 	}
@@ -114,8 +113,8 @@ func (c *EventController) GetEventSponsors(ctx *gin.Context) {
 
 // GetEventTickets 获取活动的 NFT 门票
 func (c *EventController) GetEventTickets(ctx *gin.Context) {
-	eventID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if err != nil {
+	eventID := ctx.Param("id")
+	if eventID == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
 		return
 	}
@@ -177,7 +176,7 @@ func (c *EventController) Health(ctx *gin.Context) {
 // CreateTestEvent 创建测试活动
 func (c *EventController) CreateTestEvent(ctx *gin.Context) {
 	event := &models.Event{
-		EventID:         1,
+		EventID:         "1",
 		Organizer:       "0xad6F55f669eaf666b7628d7Bd482Eb000e24D687",
 		Title:           "Test Hackathon",
 		Description:     "This is a test hackathon event",

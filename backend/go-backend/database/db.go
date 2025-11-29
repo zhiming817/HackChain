@@ -19,6 +19,7 @@ func Init(cfg *config.Config) error {
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
+		DisableForeignKeyConstraintWhenMigrating: true, // 禁用外键约束，由程序内部控制
 	})
 
 	if err != nil {

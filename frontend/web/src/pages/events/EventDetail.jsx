@@ -12,7 +12,9 @@ export default function EventDetail() {
   const navigate = useNavigate();
   const { address, isConnected } = useAccount();
   const [event, setEvent] = useState(null);
+  const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingSponsors, setLoadingSponsors] = useState(false);
   const [error, setError] = useState('');
   const [registering, setRegistering] = useState(false);
   const [registerSuccess, setRegisterSuccess] = useState('');
@@ -20,6 +22,7 @@ export default function EventDetail() {
 
   useEffect(() => {
     loadEvent();
+    loadSponsors();
   }, [eventId]);
 
   const loadEvent = async () => {
@@ -59,6 +62,48 @@ export default function EventDetail() {
       setError('Failed to load event');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSponsors = async () => {
+    try {
+      setLoadingSponsors(true);
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/events/${eventId}/sponsors`;
+      const response = await fetch(apiUrl);
+      if (!response.ok) {
+        throw new Error('Failed to fetch sponsors');
+      }
+      const result = await response.json();
+      
+      if (result.code === 0 && result.data) {
+        setSponsors(result.data);
+      }
+    } catch (err) {
+      console.error('Error loading sponsors:', err);
+    } finally {
+      setLoadingSponsors(false);
+    }
+  };
+
+  const formatAmount = (amount) => {
+    try {
+      // 将 Wei 转换为 MON
+      const formatted = ethers.formatEther(amount);
+      return parseFloat(formatted).toFixed(4);
+    } catch (error) {
+      return '0';
+    }
+  };
+
+  const getTotalSponsorship = () => {
+    if (!sponsors || sponsors.length === 0) return '0';
+    try {
+      const total = sponsors.reduce((sum, sponsor) => {
+        return sum + BigInt(sponsor.amount);
+      }, BigInt(0));
+      return parseFloat(ethers.formatEther(total.toString())).toFixed(4);
+    } catch (error) {
+      return '0';
     }
   };
 
@@ -205,6 +250,63 @@ export default function EventDetail() {
                 <p className="text-gray-600 text-sm font-medium">👥 Participants</p>
                 <p className="text-xl font-bold text-gray-900">{event.participants}/{event.maxParticipants}</p>
               </div>
+            </div>
+
+            {/* 赞助商信息 */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">💰 赞助商</h2>
+                {loadingSponsors && (
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-orange-500 border-t-transparent"></div>
+                )}
+              </div>
+
+              {sponsors && sponsors.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-green-50 rounded-lg border-2 border-green-200">
+                    <p className="text-gray-600 text-sm font-medium">总赞助金额</p>
+                    <p className="text-2xl font-bold text-green-600">{getTotalSponsorship()} MON</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {sponsors.map((sponsor, index) => (
+                      <div
+                        key={sponsor.id || index}
+                        className="p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-orange-300 transition-colors"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-bold text-gray-900 text-lg">{sponsor.name}</p>
+                            <p className="text-sm text-gray-500 mt-1">
+                              {sponsor.wallet.slice(0, 6)}...{sponsor.wallet.slice(-4)}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {new Date(sponsor.sponsored_at * 1000).toLocaleDateString('zh-CN', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-green-600">
+                              {formatAmount(sponsor.amount)}
+                            </p>
+                            <p className="text-xs text-gray-500">MON</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-gray-50 rounded-lg border-2 border-gray-200">
+                  <div className="text-4xl mb-2">💸</div>
+                  <p className="text-gray-600">暂无赞助商</p>
+                </div>
+              )}
             </div>
 
             {isConnected ? (

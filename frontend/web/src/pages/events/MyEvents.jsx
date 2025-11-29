@@ -16,6 +16,7 @@ export default function MyEvents() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [sponsorForm, setSponsorForm] = useState({ name: '', amount: '' });
   const [sponsoring, setSponsoring] = useState(false);
+  const [walletBalance, setWalletBalance] = useState('0');
 
   const HACKATHON_CONTRACT_ADDRESS = import.meta.env.VITE_HACKATHON_CONTRACT_ADDRESS;
 
@@ -85,10 +86,20 @@ export default function MyEvents() {
     return { text: '已结束', color: 'orange' };
   };
 
-  const handleOpenSponsorModal = (event) => {
+  const handleOpenSponsorModal = async (event) => {
     setSelectedEvent(event);
     setSponsorForm({ name: '', amount: '' });
     setShowSponsorModal(true);
+    
+    // 获取钱包余额
+    try {
+      const { provider } = await getProviderAndSigner();
+      const balance = await provider.getBalance(address);
+      setWalletBalance(ethers.formatEther(balance));
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+      setWalletBalance('0');
+    }
   };
 
   const handleCloseSponsorModal = () => {
@@ -109,20 +120,34 @@ export default function MyEvents() {
 
     try {
       setSponsoring(true);
-      const { signer } = await getProviderAndSigner();
+      const { signer, provider } = await getProviderAndSigner();
+      
+      // 检查钱包余额
+      const balance = await provider.getBalance(address);
+      const amountInWei = ethers.parseEther(sponsorForm.amount);
+      
+      // 预估 Gas 费用（大约 0.001 MON）
+      const estimatedGas = ethers.parseEther('0.001');
+      const totalNeeded = amountInWei + estimatedGas;
+      
+      if (balance < totalNeeded) {
+        const balanceInMon = ethers.formatEther(balance);
+        const neededInMon = ethers.formatEther(totalNeeded);
+        alert(`余额不足！\n当前余额: ${parseFloat(balanceInMon).toFixed(4)} MON\n需要金额: ${parseFloat(neededInMon).toFixed(4)} MON (含 Gas 费)\n\n请先充值 MON 代币到您的钱包`);
+        return;
+      }
+      
       const contract = new ethers.Contract(
         HACKATHON_CONTRACT_ADDRESS,
         HACKATHON_ABI,
         signer
       );
 
-      // 将 MON 转换为 Wei
-      const amountInWei = ethers.parseEther(sponsorForm.amount);
-
       console.log('Adding sponsor:', {
         eventId: selectedEvent.eventId,
         name: sponsorForm.name,
         amount: sponsorForm.amount,
+        amountInWei: amountInWei.toString(),
       });
 
       const tx = await contract.addSponsor(
@@ -144,6 +169,8 @@ export default function MyEvents() {
       console.error('Error adding sponsor:', error);
       if (error.code === 'ACTION_REJECTED') {
         alert('用户取消了交易');
+      } else if (error.message?.includes('insufficient funds')) {
+        alert('余额不足，请确保钱包有足够的 MON 代币支付赞助金额和 Gas 费');
       } else {
         alert(`添加赞助失败: ${error.message}`);
       }
@@ -275,6 +302,9 @@ export default function MyEvents() {
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">活动：</p>
               <p className="font-bold text-gray-900">{selectedEvent?.title}</p>
+              <p className="text-sm text-green-600 mt-2">
+                💰 当前余额: {parseFloat(walletBalance).toFixed(4)} MON
+              </p>
             </div>
 
             <div className="space-y-4">

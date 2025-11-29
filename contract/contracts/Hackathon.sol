@@ -6,6 +6,18 @@ pragma solidity ^0.8.27;
  * @dev Hackathon event management contract on Somnia blockchain
  */
 
+// Interface for NFTTicket contract
+interface INFTTicket {
+    function issueTicket(
+        uint256 _eventId,
+        address _holder,
+        string memory _eventTitle,
+        string memory _location,
+        uint256 _startTime,
+        uint256 _endTime
+    ) external returns (uint256);
+}
+
 contract Hackathon {
     // Event structure
     struct Event {
@@ -48,6 +60,7 @@ contract Hackathon {
     
     uint256 public eventCounter;
     address public owner;
+    address public nftTicketContract;
 
     // Events
     event EventCreated(uint256 indexed eventId, address indexed organizer, string title);
@@ -55,6 +68,7 @@ contract Hackathon {
     event ParticipantCheckedIn(uint256 indexed eventId, address indexed participant);
     event SponsorAdded(uint256 indexed eventId, address indexed sponsor, uint256 amount);
     event EventClosed(uint256 indexed eventId);
+    event TicketIssued(uint256 indexed eventId, address indexed participant, uint256 indexed tokenId);
 
     // Modifiers
     modifier onlyOwner() {
@@ -76,6 +90,13 @@ contract Hackathon {
     constructor() {
         owner = msg.sender;
         eventCounter = 0;
+    }
+
+    /**
+     * @dev Set NFT Ticket contract address (only owner)
+     */
+    function setNFTTicketContract(address _nftTicketContract) public onlyOwner {
+        nftTicketContract = _nftTicketContract;
     }
 
     /**
@@ -134,6 +155,23 @@ contract Hackathon {
         event_.participantCount++;
 
         emit ParticipantRegistered(_eventId, msg.sender);
+
+        // 自动发放 NFT 门票
+        if (nftTicketContract != address(0)) {
+            try INFTTicket(nftTicketContract).issueTicket(
+                _eventId,
+                msg.sender,
+                event_.title,
+                event_.location,
+                event_.startTime,
+                event_.endTime
+            ) returns (uint256 tokenId) {
+                emit TicketIssued(_eventId, msg.sender, tokenId);
+            } catch {
+                // 如果 NFT 发放失败，不影响报名流程
+                // 可以稍后手动补发
+            }
+        }
     }
 
     /**

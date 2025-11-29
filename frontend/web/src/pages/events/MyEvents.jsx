@@ -31,7 +31,7 @@ export default function MyEvents() {
   const loadMyEvents = async () => {
     try {
       setLoading(true);
-      // 使用专门的组织者接口
+      // use organizer-specific API
       const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/events/organizer?organizer=${address}`;
       const response = await fetch(apiUrl);
       if (!response.ok) {
@@ -69,7 +69,7 @@ export default function MyEvents() {
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
     const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString('zh-CN', {
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -80,10 +80,10 @@ export default function MyEvents() {
 
   const getEventStatus = (event) => {
     const now = Date.now() / 1000;
-    if (!event.active) return { text: '已关闭', color: 'gray' };
-    if (now < event.startTime) return { text: '未开始', color: 'blue' };
-    if (now >= event.startTime && now <= event.endTime) return { text: '进行中', color: 'green' };
-    return { text: '已结束', color: 'orange' };
+    if (!event.active) return { text: 'Closed', color: 'gray' };
+    if (now < event.startTime) return { text: 'Upcoming', color: 'blue' };
+    if (now >= event.startTime && now <= event.endTime) return { text: 'Live', color: 'green' };
+    return { text: 'Ended', color: 'orange' };
   };
 
   const handleOpenSponsorModal = async (event) => {
@@ -110,11 +110,11 @@ export default function MyEvents() {
 
   const handleAddSponsor = async () => {
     if (!sponsorForm.name.trim()) {
-      alert('请输入赞助商名称');
+      alert('Please enter a sponsor name');
       return;
     }
     if (!sponsorForm.amount || parseFloat(sponsorForm.amount) <= 0) {
-      alert('请输入有效的赞助金额');
+      alert('Please enter a valid sponsorship amount');
       return;
     }
 
@@ -126,14 +126,14 @@ export default function MyEvents() {
       const balance = await provider.getBalance(address);
       const amountInWei = ethers.parseEther(sponsorForm.amount);
       
-      // 预估 Gas 费用（大约 0.001 MON）
+      // estimate gas fee (~0.001 MON)
       const estimatedGas = ethers.parseEther('0.001');
       const totalNeeded = amountInWei + estimatedGas;
       
       if (balance < totalNeeded) {
         const balanceInMon = ethers.formatEther(balance);
         const neededInMon = ethers.formatEther(totalNeeded);
-        alert(`余额不足！\n当前余额: ${parseFloat(balanceInMon).toFixed(4)} MON\n需要金额: ${parseFloat(neededInMon).toFixed(4)} MON (含 Gas 费)\n\n请先充值 MON 代币到您的钱包`);
+        alert(`Insufficient balance!\nCurrent balance: ${parseFloat(balanceInMon).toFixed(4)} MON\nRequired: ${parseFloat(neededInMon).toFixed(4)} MON (including gas)\n\nPlease top up your wallet with MON tokens.`);
         return;
       }
       
@@ -160,7 +160,7 @@ export default function MyEvents() {
       await tx.wait();
       console.log('Transaction confirmed!');
 
-      alert('赞助添加成功！');
+      alert('Sponsor added successfully!');
       handleCloseSponsorModal();
       
       // 刷新活动列表
@@ -168,11 +168,11 @@ export default function MyEvents() {
     } catch (error) {
       console.error('Error adding sponsor:', error);
       if (error.code === 'ACTION_REJECTED') {
-        alert('用户取消了交易');
+        alert('User cancelled the transaction');
       } else if (error.message?.includes('insufficient funds')) {
-        alert('余额不足，请确保钱包有足够的 MON 代币支付赞助金额和 Gas 费');
+        alert('Insufficient funds. Please ensure your wallet has enough MON to cover the sponsorship and gas fees');
       } else {
-        alert(`添加赞助失败: ${error.message}`);
+        alert(`Failed to add sponsor: ${error.message}`);
       }
     } finally {
       setSponsoring(false);
@@ -258,7 +258,7 @@ export default function MyEvents() {
                       <p className="text-gray-600 mb-4 line-clamp-2">{event.description}</p>
                       <div className="space-y-2 text-sm text-gray-700 mb-4">
                         <p>📍 {event.location}</p>
-                        <p>👥 {event.participants}/{event.maxParticipants} 参与者</p>
+                        <p>👥 {event.participants}/{event.maxParticipants} participants</p>
                         <p>🕐 {formatDate(event.startTime)}</p>
                         <p className="text-xs text-gray-500">Event ID: #{event.eventId}</p>
                       </div>
@@ -267,13 +267,13 @@ export default function MyEvents() {
                           onClick={() => navigate(`/events/${event.eventId}/checkin`)}
                           className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 transition-all"
                         >
-                          签到管理
+                          Manage Check-ins
                         </button>
                         <button
                           onClick={() => handleOpenSponsorModal(event)}
                           className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all"
                         >
-                          💰 添加赞助
+                          💰 Add Sponsor
                         </button>
                       </div>
                     </div>
@@ -290,7 +290,7 @@ export default function MyEvents() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">💰 添加赞助商</h2>
+              <h2 className="text-2xl font-bold text-gray-900">💰 Add Sponsor</h2>
               <button
                 onClick={handleCloseSponsorModal}
                 className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -300,23 +300,23 @@ export default function MyEvents() {
             </div>
 
             <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">活动：</p>
+              <p className="text-sm text-gray-600 mb-2">Event:</p>
               <p className="font-bold text-gray-900">{selectedEvent?.title}</p>
               <p className="text-sm text-green-600 mt-2">
-                💰 当前余额: {parseFloat(walletBalance).toFixed(4)} MON
+                💰 Current balance: {parseFloat(walletBalance).toFixed(4)} MON
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  赞助商名称 *
+                  Sponsor Name *
                 </label>
                 <input
                   type="text"
                   value={sponsorForm.name}
                   onChange={(e) => setSponsorForm({ ...sponsorForm, name: e.target.value })}
-                  placeholder="请输入赞助商名称"
+                  placeholder="Enter sponsor name"
                   className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
                   disabled={sponsoring}
                 />
@@ -324,7 +324,7 @@ export default function MyEvents() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  赞助金额 (MON) *
+                  Sponsorship Amount (MON) *
                 </label>
                 <input
                   type="number"
@@ -337,7 +337,7 @@ export default function MyEvents() {
                   disabled={sponsoring}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  请输入要赞助的 MON 代币数量
+                  Enter the amount of MON tokens to sponsor
                 </p>
               </div>
             </div>
@@ -348,21 +348,21 @@ export default function MyEvents() {
                 className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-all"
                 disabled={sponsoring}
               >
-                取消
+                Cancel
               </button>
               <button
                 onClick={handleAddSponsor}
                 disabled={sponsoring}
                 className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {sponsoring ? '处理中...' : '确认赞助'}
+                {sponsoring ? 'Processing...' : 'Confirm Sponsor'}
               </button>
             </div>
 
             {sponsoring && (
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-700 text-center">
-                  ⏳ 正在提交交易，请在钱包中确认...
+                  ⏳ Submitting transaction, please confirm in your wallet...
                 </p>
               </div>
             )}

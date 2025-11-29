@@ -15,8 +15,8 @@ export default function EventDetail() {
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingSponsors, setLoadingSponsors] = useState(false);
-  const [loadError, setLoadError] = useState(''); // 加载事件时的错误
-  const [error, setError] = useState(''); // 注册时的错误
+  const [loadError, setLoadError] = useState(''); // error while loading the event
+  const [error, setError] = useState(''); // error during registration
   const [registering, setRegistering] = useState(false);
   const [registerSuccess, setRegisterSuccess] = useState('');
   const [participantName, setParticipantName] = useState('');
@@ -37,7 +37,7 @@ export default function EventDetail() {
       const result = await response.json();
       
       if (result.code === 0 && result.data) {
-        // 将后端返回的数据格式转换为前端期望的格式
+        // convert backend response format to frontend-friendly format
         const transformedEvent = {
           id: result.data.id,
           eventId: result.data.event_id,
@@ -55,19 +55,19 @@ export default function EventDetail() {
           syncedAt: result.data.synced_at,
         };
         setEvent(transformedEvent);
-        // 只在初始加载时设置错误，后续重新加载时保留现有状态
+        // only set load error on the initial load; keep existing state on reloads
         if (!event) {
           setLoadError('');
         }
       } else {
-        // 只在初始加载时设置错误
+        // only set load error on the initial load
         if (!event) {
           setLoadError('Event not found');
         }
       }
     } catch (err) {
       console.error('Error loading event:', err);
-      // 只在初始加载时设置错误
+      // only set load error on the initial load
       if (!event) {
         setLoadError('Failed to load event');
       }
@@ -98,7 +98,7 @@ export default function EventDetail() {
 
   const formatAmount = (amount) => {
     try {
-      // 将 Wei 转换为 MON
+      // convert Wei to MON
       const formatted = ethers.formatEther(amount);
       return parseFloat(formatted).toFixed(4);
     } catch (error) {
@@ -131,20 +131,20 @@ export default function EventDetail() {
     try {
       console.log('🎭 Registering for event:', event.eventId);
 
-      // 获取 provider 和 signer (会自动切换网络)
+      // get provider and signer (may switch network automatically)
       const { signer } = await getProviderAndSigner();
 
-      // 获取合约地址
+      // get contract address
       const contractAddress = import.meta.env.VITE_HACKATHON_CONTRACT_ADDRESS;
       if (!contractAddress) {
         throw new Error('Contract address not configured');
       }
 
-      // 创建合约实例
+      // create contract instance
       const contract = new ethers.Contract(contractAddress, HACKATHON_ABI, signer);
 
-      // 调用合约的 registerParticipant 方法
-      // 使用 BigInt 确保大数字精度
+      // call contract.registerParticipant
+      // use BigInt for big number precision
       console.log('⏳ Sending registration transaction...');
       const eventIdBigInt = ethers.toBigInt(event.eventId);
       console.log('Event ID (BigInt):', eventIdBigInt.toString());
@@ -185,12 +185,12 @@ export default function EventDetail() {
       } else if (err.message?.includes('Event is not active') || err.reason?.includes('Event is not active')) {
         errorMessage = '⚠️ This event is not active';
       } else if (err.data?.message) {
-        // 处理合约 revert 错误
+        // handle contract revert errors
         const msg = err.data.message;
         if (msg.includes('Already registered')) {
           errorMessage = '⚠️ You have already registered for this event';
         } else if (msg.includes('execution reverted')) {
-          // 提取 revert 原因
+          // extract revert reason
           const match = msg.match(/execution reverted: (.+)/);
           if (match) {
             errorMessage = `❌ Contract Error: ${match[1]}`;
@@ -208,10 +208,10 @@ export default function EventDetail() {
       
       setError(errorMessage);
       
-      // 滚动到错误提示位置
+      // scroll to the error area
       window.scrollTo({ top: 0, behavior: 'smooth' });
       
-      // 不要重新加载事件数据，避免触发页面跳转
+      // do not reload event data to avoid navigation
     } finally {
       setRegistering(false);
     }
@@ -312,10 +312,10 @@ export default function EventDetail() {
               </div>
             </div>
 
-            {/* 赞助商信息 */}
+            {/* Sponsors info */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">💰 赞助商</h2>
+                <h2 className="text-2xl font-bold text-gray-900">💰 Sponsors</h2>
                 {loadingSponsors && (
                   <div className="animate-spin rounded-full h-5 w-5 border-2 border-orange-500 border-t-transparent"></div>
                 )}
@@ -324,7 +324,7 @@ export default function EventDetail() {
               {sponsors && sponsors.length > 0 ? (
                 <div className="space-y-4">
                   <div className="p-4 bg-green-50 rounded-lg border-2 border-green-200">
-                    <p className="text-gray-600 text-sm font-medium">总赞助金额</p>
+                    <p className="text-gray-600 text-sm font-medium">Total Sponsorship</p>
                     <p className="text-2xl font-bold text-green-600">{getTotalSponsorship()} MON</p>
                   </div>
 
@@ -341,7 +341,7 @@ export default function EventDetail() {
                               {sponsor.wallet.slice(0, 6)}...{sponsor.wallet.slice(-4)}
                             </p>
                             <p className="text-xs text-gray-400 mt-1">
-                              {new Date(sponsor.sponsored_at * 1000).toLocaleDateString('zh-CN', {
+                              {new Date(sponsor.sponsored_at * 1000).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric',
@@ -364,7 +364,7 @@ export default function EventDetail() {
               ) : (
                 <div className="p-8 text-center bg-gray-50 rounded-lg border-2 border-gray-200">
                   <div className="text-4xl mb-2">💸</div>
-                  <p className="text-gray-600">暂无赞助商</p>
+                  <p className="text-gray-600">No sponsors yet</p>
                 </div>
               )}
             </div>

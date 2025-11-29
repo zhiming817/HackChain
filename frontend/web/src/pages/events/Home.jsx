@@ -41,7 +41,7 @@ export default function Home() {
             </p>
             
             <p className="text-xl md:text-2xl mb-12 text-gray-700 max-w-3xl mx-auto drop-shadow-sm leading-relaxed">
-              A decentralized event and ticketing platform powered by Sui smart contracts, Walrus storage, and Seal encryption.
+              A decentralized event and ticketing platform powered by Monad smart contracts.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -124,7 +124,7 @@ export default function Home() {
                     <p className="text-2xl font-bold text-orange-700">NFT Ticketing</p>
                   </div>
                   <p className="text-lg text-gray-700 ml-12">
-                    Verifiable, encrypted NFT tickets on Sui with true ownership and transferability.
+                    Verifiable, encrypted NFT tickets on Monad with true ownership and transferability.
                   </p>
                 </div>
                 <div className="bg-white/80 rounded-lg p-6 border-2 border-orange-300">
@@ -177,7 +177,7 @@ export default function Home() {
                     <span className="text-4xl font-black text-yellow-600">1</span>
                     <div>
                       <p className="text-xl font-bold text-gray-900 mb-2">Create Event</p>
-                      <p className="text-lg text-gray-700">Organizers create events with metadata stored on Walrus. Set capacity, pricing, and access rules.</p>
+                      <p className="text-lg text-gray-700">Organizers create events with metadata stored on-chain. Set capacity, pricing, and access rules.</p>
                     </div>
                   </div>
                 </div>
@@ -195,7 +195,7 @@ export default function Home() {
                     <span className="text-4xl font-black text-red-600">3</span>
                     <div>
                       <p className="text-xl font-bold text-gray-900 mb-2">Access Event</p>
-                      <p className="text-lg text-gray-700">Ticket holders decrypt their tickets and access full Walrus Site with event content.</p>
+                      <p className="text-lg text-gray-700">Ticket holders decrypt their tickets and access the full event site with event content.</p>
                     </div>
                   </div>
                 </div>
@@ -308,32 +308,32 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                 </svg>
                 <h2 className="text-4xl md:text-5xl font-black text-yellow-400">
-                  Powered By Web3
+                  Powered By Monad
                 </h2>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="bg-white/10 backdrop-blur rounded-lg p-6 border-2 border-white/20">
                   <div className="flex items-center gap-3 mb-3">
                     <span className="text-3xl">⛓️</span>
-                    <h3 className="text-2xl font-bold text-yellow-300">Sui Blockchain</h3>
+                    <h3 className="text-2xl font-bold text-yellow-300">Monad</h3>
                   </div>
                   <p className="text-white/90 text-lg">
-                    Fast, secure smart contracts for tickets and HackChainnce NFTs
+                    Fast, secure smart contracts and NFT primitives powered by Monad for tickets and HackChainnce.
                   </p>
                 </div>
                 <div className="bg-white/10 backdrop-blur rounded-lg p-6 border-2 border-white/20">
                   <div className="flex items-center gap-3 mb-3">
                     <span className="text-3xl">🗄️</span>
-                    <h3 className="text-2xl font-bold text-yellow-300">Walrus Storage</h3>
+                    <h3 className="text-2xl font-bold text-yellow-300">Decentralized Storage</h3>
                   </div>
                   <p className="text-white/90 text-lg">
-                    Decentralized storage for event metadata and content
+                    Secure, decentralized storage for event metadata and content
                   </p>
                 </div>
                 <div className="bg-white/10 backdrop-blur rounded-lg p-6 border-2 border-white/20">
                   <div className="flex items-center gap-3 mb-3">
                     <span className="text-3xl">🔐</span>
-                    <h3 className="text-2xl font-bold text-yellow-300">Seal Encryption</h3>
+                    <h3 className="text-2xl font-bold text-yellow-300">Encryption</h3>
                   </div>
                   <p className="text-white/90 text-lg">
                     End-to-end encryption for private ticket details

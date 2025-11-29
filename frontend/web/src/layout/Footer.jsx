@@ -16,10 +16,10 @@ const Footer = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <span className="text-xl font-bold text-gray-900">ResumeVault</span>
+              <span className="text-xl font-bold text-gray-900">HackChain</span>
             </div>
             <p className="text-gray-600 max-w-md">
-              Decentralized yield optimization protocol on Sui. 
+              Decentralized yield optimization protocol on Monad. 
               Maximize your returns with automated market allocation strategies.
             </p>
             <div className="flex space-x-4 mt-6">
@@ -75,31 +75,19 @@ const Footer = () => {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="https://sui.io"
+                  href="https://monad.xyz"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-600 hover:text-gray-900 transition-colors flex items-center space-x-1"
                 >
-                  <span>Sui Network</span>
+                  <span>Monad Network</span>
                   <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 </a>
               </li>
               
-               <li>
-                <a
-                  href="https://www.walrus.xyz/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-600 hover:text-gray-900 transition-colors flex items-center space-x-1"
-                >
-                  <span>Walrus</span>
-                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
-              </li>
+              
             </ul>
           </div>
         </div>
@@ -107,7 +95,7 @@ const Footer = () => {
         <div className="mt-8 pt-8 border-t border-gray-200">
           <div className="md:flex md:items-center md:justify-between">
             <div className="text-sm text-gray-600">
-              &copy; {currentYear} HackChain. Built on Sui Network.
+              &copy; {currentYear} HackChain. Built on Monad Network.
             </div>
             <div className="mt-4 md:mt-0">
               <div className="flex space-x-6 text-sm text-gray-600">

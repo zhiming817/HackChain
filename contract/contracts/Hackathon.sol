@@ -16,6 +16,10 @@ interface INFTTicket {
         uint256 _startTime,
         uint256 _endTime
     ) external returns (uint256);
+    
+    function useTicket(uint256 _tokenId) external;
+    
+    function hasTicket(uint256 _eventId, address _holder) external view returns (bool);
 }
 
 contract Hackathon {
@@ -77,7 +81,7 @@ contract Hackathon {
     }
 
     modifier eventExists(uint256 _eventId) {
-        require(_eventId < eventCounter, "Event does not exist");
+        require(events[_eventId].id != 0, "Event does not exist");
         _;
     }
 
@@ -113,7 +117,14 @@ contract Hackathon {
         require(_startTime < _endTime, "Start time must be before end time");
         require(_maxParticipants > 0, "Max participants must be greater than 0");
 
-        uint256 eventId = eventCounter;
+        // 生成唯一的事件ID：使用合约地址、时间戳、发送者和计数器的哈希
+        uint256 eventId = uint256(keccak256(abi.encodePacked(
+            address(this),
+            block.timestamp,
+            msg.sender,
+            eventCounter
+        )));
+        
         events[eventId] = Event({
             id: eventId,
             organizer: msg.sender,
@@ -177,15 +188,26 @@ contract Hackathon {
     /**
      * @dev Check in a participant
      */
-    function checkInParticipant(uint256 _eventId, address _participant) public onlyEventOrganizer(_eventId) eventExists(_eventId) {
+    function checkInParticipant(uint256 _eventId, address _participant, uint256 _tokenId) public onlyEventOrganizer(_eventId) eventExists(_eventId) {
         require(isParticipant[_eventId][_participant], "Participant not registered");
 
         Participant[] storage participants = eventParticipants[_eventId];
         for (uint256 i = 0; i < participants.length; i++) {
             if (participants[i].wallet == _participant) {
+                require(!participants[i].checkedIn, "Already checked in");
                 participants[i].checkedIn = true;
                 participants[i].checkInTime = block.timestamp;
                 emit ParticipantCheckedIn(_eventId, _participant);
+                
+                // 标记 NFT 门票为已使用
+                if (nftTicketContract != address(0) && _tokenId > 0) {
+                    try INFTTicket(nftTicketContract).useTicket(_tokenId) {
+                        // 门票标记成功
+                    } catch {
+                        // 如果标记失败，不影响签到流程
+                    }
+                }
+                
                 break;
             }
         }

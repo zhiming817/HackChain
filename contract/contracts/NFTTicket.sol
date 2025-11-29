@@ -60,7 +60,15 @@ contract NFTTicket is ERC721, Ownable {
         uint256 _startTime,
         uint256 _endTime
     ) public onlyHackathonContract returns (uint256) {
-        uint256 tokenId = tokenIdCounter.current();
+        // 生成唯一的tokenId：使用合约地址、时间戳、持有者、事件ID和计数器的哈希
+        uint256 tokenId = uint256(keccak256(abi.encodePacked(
+            address(this),
+            block.timestamp,
+            _holder,
+            _eventId,
+            tokenIdCounter.current()
+        )));
+        
         tokenIdCounter.increment();
 
         _safeMint(_holder, tokenId);

@@ -2,6 +2,49 @@
 
 A decentralized hackathon management platform supporting multi-chain deployment (EVM, SVM, Sui, Aptos, and other major blockchains), featuring NFT tickets, on-chain event management, and real-time data synchronization.
 
+## 💡 Problems We Solve
+
+### Challenges in Traditional Hackathon Management
+
+1. **Lack of Transparency** 📊
+   - Participation data, sponsorship amounts, and other information are not publicly accessible
+   - High trust costs between organizers and participants
+   - Difficult to verify event authenticity and participant numbers
+
+2. **Centralization Risks** 🏢
+   - Dependent on third-party platforms for event and data management
+   - Platforms may change rules or shut down services at any time
+   - Data ownership does not belong to organizers and participants
+
+3. **Complex Ticket Management** 🎫
+   - Traditional paper tickets are easy to forge and lose
+   - Electronic ticketing systems require additional costs and maintenance
+   - Check-in processes are cumbersome and often result in long queues
+
+4. **Difficult Sponsorship Tracking** 💰
+   - Hard to track sponsorship amounts and their usage
+   - Lack of transparent records of fund flows
+   - High trust costs between sponsors and event organizers
+
+5. **Cross-Chain Limitations** ⛓️
+   - Most Web3 event management platforms only support a single blockchain
+   - Developers from different ecosystems struggle to participate in the same event
+   - Limits the reach and participation of events
+
+### HackChain's Solutions
+
+✅ **Complete Transparency**: All event data, participation records, and sponsorship information are recorded on-chain and verifiable by anyone
+
+✅ **Decentralization**: Smart contracts ensure rule execution without trusting third-party platforms
+
+✅ **NFT Tickets**: Unique NFT tickets are tamper-proof, collectible, and enable quick QR code check-in
+
+✅ **On-Chain Sponsorship**: Sponsorship amounts are automatically recorded on-chain with fully transparent fund flows
+
+✅ **Multi-Chain Support**: Support for EVM, SVM, Sui, Aptos, and other major blockchains, breaking down ecosystem barriers
+
+✅ **Permanent Records**: Event data is permanently stored on-chain, serving as verifiable credentials for participants
+
 ## 🌟 Features
 
 - **Blockchain-Based Event Management**: Create and manage hackathons on multiple major blockchains

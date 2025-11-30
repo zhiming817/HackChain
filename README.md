@@ -1,10 +1,13 @@
 # HackChain
 
-A decentralized hackathon management platform built on Monad blockchain, featuring NFT tickets, on-chain event management, and real-time data synchronization.
+A decentralized hackathon management platform supporting multi-chain deployment (EVM, SVM, Sui, Aptos, and other major blockchains), featuring NFT tickets, on-chain event management, and real-time data synchronization.
 
 ## 🌟 Features
 
-- **Blockchain-Based Event Management**: Create and manage hackathons on Monad testnet
+- **Blockchain-Based Event Management**: Create and manage hackathons on multiple major blockchains
+  - EVM chains: Ethereum, Polygon, Monad, etc.
+  - SVM chains: Solana and its ecosystem
+  - Move chains: Sui, Aptos, etc.
 - **NFT Tickets**: Issue unique NFT tickets to participants with QR code check-in
 - **Smart Contract Integration**: Fully on-chain event lifecycle and participant tracking
 - **Real-Time Sync**: WebSocket-based blockchain event synchronization to backend
@@ -39,10 +42,12 @@ HackChain/
 - WebSocket event subscription
 
 **Smart Contracts**
-- Solidity 0.8.27
-- Hardhat
-- OpenZeppelin Contracts
-- Monad Testnet
+- Solidity 0.8.27 (EVM chains)
+- Rust (Solana/SVM chains)
+- Move (Sui, Aptos chains)
+- Hardhat / Anchor / Move development toolchains
+- OpenZeppelin and chain-specific standard libraries
+- Multi-chain deployment support (Ethereum, Polygon, Monad, Solana, Sui, Aptos, etc.)
 
 **Database**
 - MySQL 8.0+
@@ -54,8 +59,8 @@ HackChain/
 - Node.js 18+ and pnpm
 - Go 1.21+
 - MySQL 8.0+
-- MetaMask wallet
-- Monad testnet RPC access
+- Wallet support (MetaMask, Phantom, Sui Wallet, Petra, etc.)
+- Target blockchain RPC access (supports EVM, SVM, Sui, Aptos, and other major blockchains)
 
 ### 1. Clone Repository
 
@@ -73,8 +78,20 @@ pnpm install
 # Configure your private key in .env
 cp .env.example .env
 
-# Deploy to Monad testnet
+# Deploy to target network (choose the appropriate deployment tool for your target chain)
+# EVM chains (Ethereum, Polygon, Monad, etc.)
 pnpm hardhat run scripts/deploy.js --network monad
+# pnpm hardhat run scripts/deploy.js --network sepolia
+# pnpm hardhat run scripts/deploy.js --network polygon
+
+# Solana/SVM chains
+# anchor build && anchor deploy --provider.cluster devnet
+
+# Sui chain
+# sui move build && sui client publish --gas-budget 100000000
+
+# Aptos chain
+# aptos move compile && aptos move publish
 ```
 
 Save the deployed contract addresses for the next steps.
@@ -162,13 +179,26 @@ ERC721-based NFT ticket system.
 
 ## 🔄 Data Synchronization
 
-The backend uses WebSocket subscriptions to listen for blockchain events in real-time:
+The backend uses chain-specific event listening mechanisms based on the blockchain type:
 
-1. **WebSocket Connection**: Maintains persistent connection to Monad RPC
-2. **Event Filtering**: Subscribes to Hackathon contract events
+**EVM Chains (Ethereum, Polygon, Monad, etc.)**
+1. **WebSocket Connection**: Maintains persistent connection to RPC
+2. **Event Filtering**: Subscribes to contract events
 3. **Data Processing**: Parses event logs and extracts data
 4. **Database Storage**: Stores processed data in MySQL
 5. **Heartbeat**: Keeps connection alive with periodic pings
+
+**Solana/SVM Chains**
+- Uses WebSocket subscriptions for account and program logs
+- Parses transaction instructions and events
+
+**Sui Chain**
+- Subscribes to event query API
+- Monitors on-chain object changes
+
+**Aptos Chain**
+- Uses event stream API
+- Subscribes to module events
 
 **Supported Events:**
 - EventCreated
@@ -205,10 +235,28 @@ DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=hackathon
 
-# Blockchain
-MONAD_RPC_URL=https://testnet-rpc.monad.xyz
+# Blockchain (configure based on target chain type)
+# EVM chain configuration
+CHAIN_TYPE=evm  # or svm, sui, aptos
+CHAIN_RPC_URL=https://your-rpc-endpoint
+CHAIN_ID=your-chain-id
 HACKATHON_CONTRACT_ADDRESS=0x...
 NFT_TICKET_CONTRACT_ADDRESS=0x...
+
+# Solana/SVM chain configuration (if using)
+# CHAIN_TYPE=svm
+# SOLANA_RPC_URL=https://api.devnet.solana.com
+# PROGRAM_ID=...
+
+# Sui chain configuration (if using)
+# CHAIN_TYPE=sui
+# SUI_RPC_URL=https://fullnode.devnet.sui.io
+# PACKAGE_ID=0x...
+
+# Aptos chain configuration (if using)
+# CHAIN_TYPE=aptos
+# APTOS_RPC_URL=https://fullnode.devnet.aptoslabs.com
+# MODULE_ADDRESS=0x...
 
 # Server
 SERVER_PORT=8080
@@ -217,9 +265,26 @@ SERVER_PORT=8080
 ### Frontend (src/config.js)
 
 ```javascript
+// General configuration
+export const CHAIN_TYPE = "evm"; // or "svm", "sui", "aptos"
+
+// EVM chain configuration
 export const HACKATHON_CONTRACT_ADDRESS = "0x...";
 export const NFT_TICKET_CONTRACT_ADDRESS = "0x...";
-export const MONAD_RPC_URL = "https://testnet-rpc.monad.xyz";
+export const CHAIN_RPC_URL = "https://your-rpc-endpoint";
+export const CHAIN_ID = "your-chain-id";
+
+// Solana/SVM chain configuration (if using)
+// export const SOLANA_RPC_URL = "https://api.devnet.solana.com";
+// export const PROGRAM_ID = "...";
+
+// Sui chain configuration (if using)
+// export const SUI_RPC_URL = "https://fullnode.devnet.sui.io";
+// export const PACKAGE_ID = "0x...";
+
+// Aptos chain configuration (if using)
+// export const APTOS_RPC_URL = "https://fullnode.devnet.aptoslabs.com";
+// export const MODULE_ADDRESS = "0x...";
 ```
 
 ## 📱 Mobile Check-In Scanner
@@ -244,13 +309,18 @@ The mobile scanner uses HTML5 QRCode library:
 
 ### Backend won't start
 - Ensure MySQL is running and database exists
-- Verify contract addresses in .env
-- Check Monad RPC URL is accessible
+- Verify contract/program addresses in .env
+- Check blockchain RPC URL is accessible
+- Confirm Chain Type and Chain ID are configured correctly
+- Check corresponding chain SDK is properly installed
 
-### Frontend can't connect to MetaMask
-- Add Monad testnet to MetaMask
-- Ensure you have testnet MON tokens
-- Check contract addresses in config.js
+### Frontend can't connect to wallet
+- EVM chains: Ensure MetaMask is installed and target network is added
+- Solana: Ensure Phantom or Solflare wallet is installed
+- Sui: Ensure Sui Wallet is installed
+- Aptos: Ensure Petra or Martian wallet is installed
+- Ensure you have test tokens for the corresponding chain
+- Check network configuration and contract addresses in config.js
 
 ### Events not syncing
 - Check backend logs for WebSocket errors
@@ -275,6 +345,9 @@ For questions or support, please open an issue on GitHub.
 
 ## 🙏 Acknowledgments
 
-- Monad testnet for blockchain infrastructure
-- OpenZeppelin for secure smart contract libraries
+- Major blockchain ecosystems providing infrastructure
+  - EVM ecosystem: Ethereum, Polygon, Monad, etc.
+  - Solana ecosystem and SVM-compatible chains
+  - Move ecosystem: Sui, Aptos
+- OpenZeppelin, Anchor, Move standard libraries for secure contract/program libraries
 - The entire Web3 community

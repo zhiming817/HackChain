@@ -1,29 +1,27 @@
 /**
  * 钱包服务 - 统一管理钱包连接和网络切换
- * 确保整个项目都使用 Monad 测试网络
+ * 支持多网络切换
  */
 
 import { ethers } from 'ethers';
+import { NETWORKS, DEFAULT_NETWORK } from '../config.js';
 
-// Monad 测试网络配置 - 必须是 10143
-const MONAD_CHAIN_ID_DECIMAL = 10143;
-const MONAD_CHAIN_ID_HEX = '0x279f'; // 10143 in hex
-
-const MONAD_TESTNET = {
-  chainId: MONAD_CHAIN_ID_HEX,
-  chainName: 'Monad Testnet',
-  nativeCurrency: {
-    name: 'Monad',
-    symbol: 'MON',
-    decimals: 18,
-  },
-  rpcUrls: ['https://testnet-rpc.monad.xyz'],
-  blockExplorerUrls: ['https://explorer.testnet.monad.xyz'],
-};
+/**
+ * 获取当前网络配置
+ */
+export function getCurrentNetworkConfig() {
+  if (typeof window !== 'undefined' && window.ethereum) {
+    const chainId = window.ethereum.chainId;
+    const network = Object.entries(NETWORKS).find(
+      ([_, config]) => config.chainId === chainId
+    );
+    return network ? network[1] : NETWORKS[DEFAULT_NETWORK];
+  }
+  return NETWORKS[DEFAULT_NETWORK];
+}
 
 /**
  * 初始化钱包连接
- * 自动切换到 Monad 测试网络 (10143)
  */
 export async function initializeWallet() {
   if (!window.ethereum) {
@@ -37,19 +35,12 @@ export async function initializeWallet() {
     });
 
     console.log('✅ Wallet connected:', accounts[0]);
-
-    // 强制切换到 Monad 网络
-    await switchToMonadNetwork();
     
-    // 验证网络切换成功
+    // 验证当前网络
     const chainId = await window.ethereum.request({ method: 'eth_chainId' });
     const chainIdDecimal = parseInt(chainId, 16);
     
-    if (chainIdDecimal !== MONAD_CHAIN_ID_DECIMAL) {
-      throw new Error(`Failed to switch to Monad network. Current chain ID: ${chainIdDecimal}`);
-    }
-
-    console.log('✅ Connected to Monad Testnet (Chain ID: 10143)');
+    console.log(`✅ Connected to Chain ID: ${chainIdDecimal}`);
     return accounts[0];
   } catch (error) {
     if (error.code === 4001) {
@@ -60,23 +51,28 @@ export async function initializeWallet() {
 }
 
 /**
- * 切换到 Monad 测试网络 (10143)
+ * 切换到指定网络
  */
-export async function switchToMonadNetwork() {
+export async function switchToNetwork(networkKey = DEFAULT_NETWORK) {
   if (!window.ethereum) {
     throw new Error('MetaMask not found');
   }
 
+  const networkConfig = NETWORKS[networkKey];
+  if (!networkConfig) {
+    throw new Error(`Network ${networkKey} not found`);
+  }
+
   try {
-    console.log('🔄 Attempting to switch to Monad (Chain ID: 10143)...');
+    console.log(`🔄 Attempting to switch to ${networkConfig.chainName}...`);
     
-    // 尝试切换到 Monad 网络
+    // 尝试切换到指定网络
     await window.ethereum.request({
       method: 'wallet_switchEthereumChain',
-      params: [{ chainId: MONAD_CHAIN_ID_HEX }],
+      params: [{ chainId: networkConfig.chainId }],
     });
 
-    console.log('✅ Switched to Monad Testnet');
+    console.log(`✅ Switched to ${networkConfig.chainName}`);
     
   } catch (switchError) {
     console.log('Switch error code:', switchError.code, switchError.message);
@@ -84,43 +80,25 @@ export async function switchToMonadNetwork() {
     // 如果网络不存在，添加网络
     if (switchError.code === 4902) {
       try {
-        console.log('📝 Network not found, adding Monad network...');
+        console.log(`📝 Network not found, adding ${networkConfig.chainName}...`);
         await window.ethereum.request({
           method: 'wallet_addEthereumChain',
-          params: [MONAD_TESTNET],
+          params: [{
+            chainId: networkConfig.chainId,
+            chainName: networkConfig.chainName,
+            rpcUrls: networkConfig.rpcUrls,
+            nativeCurrency: networkConfig.nativeCurrency,
+            blockExplorerUrls: networkConfig.blockExplorerUrls,
+          }],
         });
 
-        console.log('✅ Monad Testnet added');
-        
-        // 再次尝试切换
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: MONAD_CHAIN_ID_HEX }],
-        });
-        
-        console.log('✅ Switched to Monad Testnet');
+        console.log(`✅ ${networkConfig.chainName} added and switched`);
       } catch (addError) {
         console.error('Add network error:', addError);
-        // 如果是因为相同 RPC endpoint 的错误，忽略并继续
-        if (addError.message?.includes('RPC endpoint')) {
-          console.log('⚠️ Network already exists with same RPC endpoint, attempting to switch...');
-          try {
-            await window.ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: MONAD_CHAIN_ID_HEX }],
-            });
-            console.log('✅ Switched to Monad Testnet');
-          } catch (switchError2) {
-            console.error('Switch error:', switchError2);
-            if (switchError2.code !== 4001) {
-              throw switchError2;
-            }
-          }
-        } else if (addError.code === 4001) {
+        if (addError.code === 4001) {
           throw new Error('User rejected network addition');
-        } else {
-          console.log('⚠️ Could not add network, but continuing...');
         }
+        throw addError;
       }
     } else if (switchError.code === 4001) {
       throw new Error('User rejected network switch');
@@ -136,15 +114,6 @@ export async function switchToMonadNetwork() {
 export async function getProviderAndSigner() {
   if (!window.ethereum) {
     throw new Error('MetaMask not found');
-  }
-
-  // 检查当前网络，如果不是 Monad 则切换
-  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-  const currentChainId = parseInt(chainId, 16);
-  
-  if (currentChainId !== MONAD_CHAIN_ID_DECIMAL) {
-    console.log(`Current chain: ${currentChainId}, switching to Monad (${MONAD_CHAIN_ID_DECIMAL})...`);
-    await switchToMonadNetwork();
   }
 
   const provider = new ethers.BrowserProvider(window.ethereum);
@@ -164,10 +133,15 @@ export async function getCurrentNetwork() {
   const provider = new ethers.BrowserProvider(window.ethereum);
   const network = await provider.getNetwork();
 
+  const networkEntry = Object.entries(NETWORKS).find(
+    ([_, config]) => BigInt(config.chainIdDecimal) === network.chainId
+  );
+
   return {
     chainId: network.chainId,
     name: network.name,
-    isMonad: network.chainId === BigInt(MONAD_CHAIN_ID_DECIMAL),
+    networkKey: networkEntry ? networkEntry[0] : null,
+    config: networkEntry ? networkEntry[1] : null,
   };
 }
 
@@ -175,7 +149,8 @@ export async function getCurrentNetwork() {
  * 获取账户余额
  */
 export async function getBalance(address) {
-  const provider = new ethers.JsonRpcProvider(MONAD_TESTNET.rpcUrls[0]);
+  const networkConfig = getCurrentNetworkConfig();
+  const provider = new ethers.JsonRpcProvider(networkConfig.rpcUrls[0]);
   const balanceWei = await provider.getBalance(address);
   return ethers.formatEther(balanceWei);
 }
@@ -187,10 +162,13 @@ export function onNetworkChange(callback) {
   if (!window.ethereum) return;
 
   window.ethereum.on('chainChanged', (chainId) => {
-    const isMonad = parseInt(chainId, 16) === MONAD_CHAIN_ID_DECIMAL;
+    const chainIdDecimal = parseInt(chainId, 16);
+    const networkEntry = Object.entries(NETWORKS).find(
+      ([_, config]) => config.chainIdDecimal === chainIdDecimal
+    );
     callback({
-      chainId: parseInt(chainId, 16),
-      isMonad,
+      chainId: chainIdDecimal,
+      networkKey: networkEntry ? networkEntry[0] : null,
     });
   });
 }
@@ -219,10 +197,6 @@ export function removeAccountListener() {
   window.ethereum.removeAllListeners('accountsChanged');
 }
 
-export const MONAD_CONFIG = {
-  ...MONAD_TESTNET,
-  chainIdDecimal: MONAD_CHAIN_ID_DECIMAL,
-};
-
 // 向后兼容的导出
-export const switchToSomniaNetwork = switchToMonadNetwork;
+export const switchToMonadNetwork = () => switchToNetwork('monad');
+export const switchToSomniaNetwork = () => switchToNetwork('somnia');

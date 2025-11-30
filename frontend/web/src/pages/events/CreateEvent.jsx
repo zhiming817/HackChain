@@ -239,7 +239,7 @@ export default function CreateEvent() {
                   value={formData.title}
                   onChange={handleInputChange}
                   placeholder="e.g., Web3 Hackathon 2024"
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500 text-gray-900"
                   required
                 />
               </div>
@@ -252,7 +252,7 @@ export default function CreateEvent() {
                   onChange={handleInputChange}
                   placeholder="Describe your event..."
                   rows="4"
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500 text-gray-900"
                   required
                 />
               </div>
@@ -265,7 +265,7 @@ export default function CreateEvent() {
                     name="startTime"
                     value={formData.startTime}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500 text-gray-900"
                     required
                   />
                 </div>
@@ -276,7 +276,7 @@ export default function CreateEvent() {
                     name="endTime"
                     value={formData.endTime}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500 text-gray-900"
                     required
                   />
                 </div>
@@ -290,7 +290,7 @@ export default function CreateEvent() {
                   value={formData.location}
                   onChange={handleInputChange}
                   placeholder="e.g., San Francisco, CA"
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500 text-gray-900"
                   required
                 />
               </div>
@@ -303,7 +303,7 @@ export default function CreateEvent() {
                   value={formData.maxParticipants}
                   onChange={handleInputChange}
                   placeholder="e.g., 100"
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-orange-500 text-gray-900"
                   required
                   min="1"
                 />

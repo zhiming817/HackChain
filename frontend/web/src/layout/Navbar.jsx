@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ConnectButton from '../components/ConnectButton.jsx';
+import NetworkSwitcher from '../components/NetworkSwitcher.jsx';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -72,6 +73,7 @@ const Navbar = () => {
 
           {/* Wallet Connection */}
           <div className="flex items-center space-x-4">
+            <NetworkSwitcher />
             <ConnectButton />
 
             {/* Mobile menu button */}

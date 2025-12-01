@@ -263,7 +263,7 @@ export default function CheckInScanner() {
         <div className="bg-white rounded-2xl shadow-xl border-2 border-orange-200 overflow-hidden">
           <div className="bg-gradient-to-r from-orange-500 to-red-600 p-6 text-white">
             <h1 className="text-3xl font-black mb-2">📱 Check-In Scanner</h1>
-            <p className="text-orange-100">Scan attendee QR codes to mark HackChainnce</p>
+            <p className="text-orange-100">Scan attendee QR codes to mark attendance</p>
           </div>
 
           <div className="p-8">
@@ -358,7 +358,7 @@ export default function CheckInScanner() {
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                       <p className="text-sm text-gray-500 mb-1">Issued At</p>
                       <p className="text-lg text-gray-900">
-                        {new Date(scannedData.issuedAt * 1000).toLocaleString('zh-CN')}
+                        {new Date(scannedData.issuedAt * 1000).toLocaleString('en-US')}
                       </p>
                     </div>
                   )}
@@ -369,7 +369,7 @@ export default function CheckInScanner() {
                     onClick={() => handleCheckIn(scannedData)}
                     className="flex-1 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-bold hover:shadow-lg transition-all transform hover:scale-105"
                   >
-                    ✅ 确认签到
+                    ✅ Confirm Check-In
                   </button>
                   <button
                     onClick={() => {
@@ -379,7 +379,7 @@ export default function CheckInScanner() {
                     }}
                     className="px-6 py-4 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition-all"
                   >
-                    取消
+                    Cancel
                   </button>
                 </div>
               </div>
@@ -417,7 +417,7 @@ export default function CheckInScanner() {
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                       <p className="text-sm text-gray-500 mb-1">Issued At</p>
                       <p className="text-lg text-gray-900">
-                        {new Date(scannedData.issuedAt * 1000).toLocaleString('zh-CN')}
+                        {new Date(scannedData.issuedAt * 1000).toLocaleString('en-US')}
                       </p>
                     </div>
                   )}

@@ -84,7 +84,7 @@ export default function MyTickets() {
       setShowQRModal(true);
     } catch (err) {
       console.error('Error generating QR code:', err);
-      alert('生成二维码失败');
+      alert('Failed to generate QR code');
     }
   };
 
@@ -164,7 +164,7 @@ export default function MyTickets() {
                           ? 'bg-gray-200 text-gray-600' 
                           : 'bg-green-100 text-green-600'
                       }`}>
-                        {ticket.used ? '已使用' : '有效'}
+                        {ticket.used ? 'Used' : 'Valid'}
                       </span>
                     </div>
                     
@@ -184,7 +184,7 @@ export default function MyTickets() {
                       </p>
                       <p className="flex items-center gap-2">
                         <span className="text-lg">⏰</span>
-                        <span className="text-xs text-gray-500">发放时间: {formatTime(ticket.issued_at)}</span>
+                        <span className="text-xs text-gray-500">Issued: {formatTime(ticket.issued_at)}</span>
                       </p>
                     </div>
 
@@ -194,13 +194,13 @@ export default function MyTickets() {
                         className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
                       >
                         <span>📱</span>
-                        <span>查看二维码</span>
+                        <span>View QR Code</span>
                       </button>
                       <button
                         onClick={() => navigate(`/events/${ticket.event_id}`)}
                         className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-medium hover:shadow-lg transition-all"
                       >
-                        查看活动
+                        View Event
                       </button>
                     </div>
                   </div>
@@ -226,7 +226,7 @@ export default function MyTickets() {
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-2xl font-bold mb-2">{selectedTicket.event_title}</h2>
-                  <p className="text-orange-100 text-sm">NFT 门票二维码</p>
+                  <p className="text-orange-100 text-sm">NFT Ticket QR Code</p>
                 </div>
                 <button
                   onClick={handleCloseQRModal}
@@ -254,25 +254,25 @@ export default function MyTickets() {
                   <span className="font-mono font-bold text-orange-600">#{selectedTicket.token_id}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-600">持有者</span>
+                  <span className="text-gray-600">Holder</span>
                   <span className="font-mono text-xs">{selectedTicket.holder.slice(0, 6)}...{selectedTicket.holder.slice(-4)}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-600">地点</span>
+                  <span className="text-gray-600">Location</span>
                   <span className="font-medium">{selectedTicket.location}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-600">时间</span>
+                  <span className="text-gray-600">Time</span>
                   <span className="text-xs">{formatTime(selectedTicket.start_time)}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-600">状态</span>
+                  <span className="text-gray-600">Status</span>
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                     selectedTicket.used 
                       ? 'bg-gray-200 text-gray-600' 
                       : 'bg-green-100 text-green-600'
                   }`}>
-                    {selectedTicket.used ? '已使用' : '有效'}
+                    {selectedTicket.used ? 'Used' : 'Valid'}
                   </span>
                 </div>
               </div>
@@ -280,7 +280,7 @@ export default function MyTickets() {
               {/* 提示信息 */}
               <div className="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
                 <p className="text-sm text-blue-700">
-                  💡 请在活动签到时出示此二维码
+                  💡 Please show this QR code at event check-in
                 </p>
               </div>
             </div>

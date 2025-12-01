@@ -43,17 +43,17 @@ func (r *EventRepository) GetEventByDBID(id uint64) (*models.Event, error) {
 	return &event, err
 }
 
-// GetAllEvents 获取所有活动
+// GetAllEvents 获取所有活动（按创建时间倒序，最新的在前）
 func (r *EventRepository) GetAllEvents() ([]models.Event, error) {
 	var events []models.Event
-	err := r.db.Find(&events).Error
+	err := r.db.Order("created_at DESC").Find(&events).Error
 	return events, err
 }
 
-// GetEventsByOrganizer 根据组织者获取活动
+// GetEventsByOrganizer 根据组织者获取活动（按创建时间倒序，最新的在前）
 func (r *EventRepository) GetEventsByOrganizer(organizer string) ([]models.Event, error) {
 	var events []models.Event
-	err := r.db.Where("organizer = ?", organizer).Find(&events).Error
+	err := r.db.Where("organizer = ?", organizer).Order("created_at DESC").Find(&events).Error
 	return events, err
 }
 

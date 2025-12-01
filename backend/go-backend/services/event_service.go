@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"hackathon-backend/blockchain"
+	"hackathon-backend/config"
 	"hackathon-backend/models"
 	"hackathon-backend/repositories"
 
@@ -159,8 +160,14 @@ func (s *EventService) handleParticipantRegistered(vLog types.Log) {
 		return
 	}
 
+	// 获取链信息
+	chainID := config.AppConfig.GetActiveChainID()
+	network := config.AppConfig.GetActiveNetworkName()
+
 	// 转换为数据库模型
 	participant := &models.Participant{
+		ChainID:         chainID,
+		Network:         network,
 		ContractAddress: s.getContractAddress(vLog),
 		EventID:         eventID.String(),
 		Wallet:          targetParticipant.Wallet.Hex(),
@@ -295,8 +302,14 @@ func (s *EventService) handleSponsorAdded(vLog types.Log) {
 		return
 	}
 
+	// 获取链信息
+	chainID := config.AppConfig.GetActiveChainID()
+	network := config.AppConfig.GetActiveNetworkName()
+
 	// 转换为数据库模型
 	sponsor := &models.Sponsor{
+		ChainID:         chainID,
+		Network:         network,
 		ContractAddress: s.getContractAddress(vLog),
 		EventID:         eventID.String(),
 		Wallet:          targetSponsor.Wallet.Hex(),
@@ -341,8 +354,14 @@ func (s *EventService) handleEventCreated(vLog types.Log) {
 		return
 	}
 
+	// 获取链信息
+	chainID := config.AppConfig.GetActiveChainID()
+	network := config.AppConfig.GetActiveNetworkName()
+
 	// 转换为数据库模型
 	event := &models.Event{
+		ChainID:          chainID,
+		Network:          network,
 		ContractAddress:  s.getContractAddress(vLog),
 		EventID:          details.Id.String(), // 转换为字符串
 		Organizer:        details.Organizer.Hex(),
@@ -491,7 +510,13 @@ func (s *EventService) GetEventTickets(eventID string) ([]models.NFTTicket, erro
 
 // CreateSyncLog 创建同步日志
 func (s *EventService) CreateSyncLog(eventType string, blockNumber uint64, txHash string, status string, errMsg string) error {
+	// 获取链信息
+	chainID := config.AppConfig.GetActiveChainID()
+	network := config.AppConfig.GetActiveNetworkName()
+
 	log := &models.SyncLog{
+		ChainID:     chainID,
+		Network:     network,
 		EventType:   eventType,
 		BlockNumber: blockNumber,
 		TxHash:      txHash,
@@ -553,8 +578,14 @@ func (s *EventService) handleTicketIssued(vLog types.Log) {
 		return
 	}
 
+	// 获取链信息
+	chainID := config.AppConfig.GetActiveChainID()
+	network := config.AppConfig.GetActiveNetworkName()
+
 	// 转换为数据库模型
 	nftTicket := &models.NFTTicket{
+		ChainID:         chainID,
+		Network:         network,
 		ContractAddress: s.getContractAddress(vLog),
 		TokenID:         ticket.TokenID.String(),
 		EventID:         ticket.EventID.String(),

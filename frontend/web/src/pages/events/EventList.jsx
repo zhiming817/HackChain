@@ -39,6 +39,8 @@ export default function EventList() {
           createdAt: event.created_at,
           updatedAt: event.updated_at,
           syncedAt: event.synced_at,
+          network: event.network,
+          chainId: event.chain_id,
         }));
         setEvents(transformedEvents);
       }
@@ -93,7 +95,14 @@ export default function EventList() {
                     onClick={() => navigate(`/events/${event.eventId}`)}
                     className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg border-2 border-orange-200 p-6 cursor-pointer hover:shadow-lg transition-all transform hover:scale-105"
                   >
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xl font-bold text-gray-900">{event.title}</h3>
+                      {event.network && (
+                        <span className="px-2 py-1 text-xs font-semibold bg-purple-100 text-purple-700 rounded-full">
+                          {event.network}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-gray-600 mb-4">{event.description}</p>
                     <div className="space-y-2 text-sm text-gray-700">
                       <p>📍 {event.location}</p>

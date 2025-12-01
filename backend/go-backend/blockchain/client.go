@@ -27,16 +27,54 @@ type BlockchainClient struct {
 var BlockchainClientInstance *BlockchainClient
 
 func Init(cfg *config.Config) error {
-	// 连接 HTTP RPC
-	httpClient, err := ethclient.Dial(cfg.MonadRPCURL)
-	if err != nil {
-		return fmt.Errorf("failed to connect to HTTP RPC: %w", err)
+	// 获取活动网络的配置
+	rpcURL := cfg.GetActiveRPCURL()
+	wsURL := cfg.GetActiveWSURL()
+	hackathonAddr := cfg.GetActiveHackathonAddress()
+	nftTicketAddr := cfg.GetActiveNFTTicketAddress()
+
+	log.Printf("🔗 Active Network: %s", cfg.ActiveNetwork)
+	log.Printf("🔗 RPC URL: %s", rpcURL)
+	log.Printf("🔗 WebSocket URL: %s", wsURL)
+	log.Printf("📝 Hackathon Contract: %s", hackathonAddr)
+	log.Printf("🎫 NFT Ticket Contract: %s", nftTicketAddr)
+
+	// 备用 RPC URLs (如果主 RPC 失败)
+	alternativeRPCs := []string{
+		rpcURL,
+		"https://rpc.ankr.com/mantle_sepolia",
+		"https://mantle-sepolia-rpc.publicnode.com",
 	}
 
-	// 连接 WebSocket RPC
-	wsClient, err := ethclient.Dial(cfg.MonadWSURL)
+	// 尝试连接 HTTP RPC (带重试)
+	var httpClient *ethclient.Client
+	var err error
+
+	for i, rpc := range alternativeRPCs {
+		log.Printf("🔄 Attempting to connect to RPC #%d: %s", i+1, rpc)
+		httpClient, err = ethclient.Dial(rpc)
+		if err == nil {
+			log.Printf("✅ Connected to RPC: %s", rpc)
+			rpcURL = rpc // 更新为成功的 RPC
+			break
+		}
+		log.Printf("⚠️ Failed to connect to %s: %v", rpc, err)
+	}
+
+	if httpClient == nil {
+		return fmt.Errorf("failed to connect to any HTTP RPC: %w", err)
+	}
+
+	// 尝试连接 WebSocket RPC
+	log.Printf("🔄 Connecting to WebSocket: %s", wsURL)
+	wsClient, err := ethclient.Dial(wsURL)
 	if err != nil {
-		return fmt.Errorf("failed to connect to WebSocket RPC: %w", err)
+		log.Printf("⚠️ WebSocket connection failed: %v", err)
+		log.Printf("⚠️ Will use HTTP client for all operations")
+		// 使用 HTTP 客户端作为后备
+		wsClient = httpClient
+	} else {
+		log.Printf("✅ WebSocket connection established")
 	}
 
 	// 测试连接
@@ -52,8 +90,8 @@ func Init(cfg *config.Config) error {
 	bc := &BlockchainClient{
 		httpClient:       httpClient,
 		wsClient:         wsClient,
-		hackathonAddress: common.HexToAddress(cfg.HackathonContractAddress),
-		nftTicketAddress: common.HexToAddress(cfg.NFTTicketContractAddress),
+		hackathonAddress: common.HexToAddress(hackathonAddr),
+		nftTicketAddress: common.HexToAddress(nftTicketAddr),
 	}
 
 	BlockchainClientInstance = bc
@@ -383,6 +421,8 @@ func (bc *BlockchainClient) SubscribeToLogs(ctx context.Context, addresses []com
 	query := ethereum.FilterQuery{
 		Addresses: addresses,
 	}
+
+	log.Printf("🔗 Attempting to subscribe via WebSocket client: %p", bc.wsClient)
 
 	logs := make(chan types.Log)
 	sub, err := bc.wsClient.SubscribeFilterLogs(ctx, query, logs)

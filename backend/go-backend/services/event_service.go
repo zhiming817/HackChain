@@ -49,10 +49,15 @@ func (s *EventService) SubscribeEvents(ctx context.Context) error {
 		bc.GetNFTTicketAddress(),
 	}
 
+	log.Printf("📝 Contract addresses to subscribe:")
+	log.Printf("   Hackathon: %s", bc.GetHackathonAddress().Hex())
+	log.Printf("   NFTTicket: %s", bc.GetNFTTicketAddress().Hex())
+
 	logs, sub, err := bc.SubscribeToLogs(ctx, addresses)
 	if err != nil {
-		log.Printf("❌ Failed to subscribe to logs: %v", err)
-		return err
+		log.Printf("⚠️ WebSocket subscription not supported: %v", err)
+		log.Println("🔄 Falling back to polling mode...")
+		return fmt.Errorf("websocket not supported, use polling instead")
 	}
 
 	log.Println("✅ Listening for events...")

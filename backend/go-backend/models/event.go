@@ -9,8 +9,10 @@ import (
 // Event 黑客松活动
 type Event struct {
 	ID               uint      `gorm:"primaryKey" json:"id"`
-	ContractAddress  string    `gorm:"index:idx_contract_event,priority:1" json:"contract_address"`           // 合约地址
-	EventID          string    `gorm:"type:varchar(100);index:idx_contract_event,priority:2" json:"event_id"` // 合约内的事件ID（存储为字符串）
+	ChainID          uint64    `gorm:"index:idx_chain_contract_event,priority:1" json:"chain_id"`                   // 链ID（如 10143=Monad, 5003=Mantle）
+	Network          string    `gorm:"type:varchar(50);index:idx_chain_contract_event,priority:2" json:"network"`   // 网络名称（monad, mantle, somnia）
+	ContractAddress  string    `gorm:"index:idx_chain_contract_event,priority:3" json:"contract_address"`           // 合约地址
+	EventID          string    `gorm:"type:varchar(100);index:idx_chain_contract_event,priority:4" json:"event_id"` // 合约内的事件ID（存储为字符串）
 	Organizer        string    `gorm:"index" json:"organizer"`
 	Title            string    `json:"title"`
 	Description      string    `gorm:"type:text" json:"description"`
@@ -42,9 +44,11 @@ func (e *Event) AfterFind(tx *gorm.DB) error {
 // Participant 参与者
 type Participant struct {
 	ID              uint      `gorm:"primaryKey" json:"id"`
-	ContractAddress string    `gorm:"index:idx_contract_event_participant,priority:1" json:"contract_address"`
-	EventID         string    `gorm:"type:varchar(100);index:idx_contract_event_participant,priority:2" json:"event_id"`
-	Wallet          string    `gorm:"index:idx_contract_event_participant,priority:3" json:"wallet"`
+	ChainID         uint64    `gorm:"index:idx_chain_contract_event_participant,priority:1" json:"chain_id"`                 // 链ID
+	Network         string    `gorm:"type:varchar(50);index:idx_chain_contract_event_participant,priority:2" json:"network"` // 网络名称
+	ContractAddress string    `gorm:"index:idx_chain_contract_event_participant,priority:3" json:"contract_address"`
+	EventID         string    `gorm:"type:varchar(100);index:idx_chain_contract_event_participant,priority:4" json:"event_id"`
+	Wallet          string    `gorm:"index:idx_chain_contract_event_participant,priority:5" json:"wallet"`
 	Name            string    `json:"name"`
 	RegisteredAt    int64     `json:"registered_at"`
 	CheckedIn       bool      `json:"checked_in"`
@@ -60,7 +64,9 @@ func (Participant) TableName() string {
 // Sponsor 赞助商
 type Sponsor struct {
 	ID              uint      `gorm:"primaryKey" json:"id"`
-	ContractAddress string    `gorm:"index" json:"contract_address"`
+	ChainID         uint64    `gorm:"index:idx_chain_sponsor,priority:1" json:"chain_id"`                 // 链ID
+	Network         string    `gorm:"type:varchar(50);index:idx_chain_sponsor,priority:2" json:"network"` // 网络名称
+	ContractAddress string    `gorm:"index:idx_chain_sponsor,priority:3" json:"contract_address"`
 	EventID         string    `gorm:"type:varchar(100);index" json:"event_id"`
 	Wallet          string    `gorm:"index" json:"wallet"`
 	Name            string    `json:"name"`
@@ -77,9 +83,11 @@ func (Sponsor) TableName() string {
 // NFTTicket NFT 门票
 type NFTTicket struct {
 	ID              uint      `gorm:"primaryKey" json:"id"`
-	ContractAddress string    `gorm:"index:idx_contract_token,priority:1" json:"contract_address"`           // NFT合约地址
-	TokenID         string    `gorm:"type:varchar(100);index:idx_contract_token,priority:2" json:"token_id"` // Token ID字符串
-	EventID         string    `gorm:"type:varchar(100);index" json:"event_id"`                               // Event ID字符串
+	ChainID         uint64    `gorm:"index:idx_chain_contract_token,priority:1" json:"chain_id"`                   // 链ID
+	Network         string    `gorm:"type:varchar(50);index:idx_chain_contract_token,priority:2" json:"network"`   // 网络名称
+	ContractAddress string    `gorm:"index:idx_chain_contract_token,priority:3" json:"contract_address"`           // NFT合约地址
+	TokenID         string    `gorm:"type:varchar(100);index:idx_chain_contract_token,priority:4" json:"token_id"` // Token ID字符串
+	EventID         string    `gorm:"type:varchar(100);index" json:"event_id"`                                     // Event ID字符串
 	Holder          string    `gorm:"index" json:"holder"`
 	EventTitle      string    `json:"event_title"`
 	Location        string    `json:"location"`
@@ -98,7 +106,9 @@ func (NFTTicket) TableName() string {
 // SyncLog 同步日志
 type SyncLog struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
-	EventType   string    `json:"event_type"` // "event", "participant", "sponsor", "ticket"
+	ChainID     uint64    `gorm:"index" json:"chain_id"`                 // 链ID
+	Network     string    `gorm:"type:varchar(50);index" json:"network"` // 网络名称
+	EventType   string    `json:"event_type"`                            // "event", "participant", "sponsor", "ticket"
 	BlockNumber uint64    `json:"block_number"`
 	TxHash      string    `json:"tx_hash"`
 	Status      string    `json:"status"` // "success", "failed"

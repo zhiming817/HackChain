@@ -1,7 +1,17 @@
 import hre from "hardhat";
 
 async function main() {
-  console.log("🚀 Deploying Hackathon contracts to Monad...");
+  // Get network information
+  const network = hre.network.name;
+  const networkDisplayName = {
+    monad: "Monad Testnet",
+    mantle: "Mantle Sepolia",
+    somnia: "Somnia Network",
+    sepolia: "Ethereum Sepolia",
+    polygon: "Polygon",
+  }[network] || network;
+  
+  console.log(`🚀 Deploying Hackathon contracts to ${networkDisplayName}...`);
 
   // Get deployer account
   const [deployer] = await hre.ethers.getSigners();

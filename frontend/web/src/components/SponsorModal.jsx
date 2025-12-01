@@ -3,14 +3,14 @@ import { ethers } from 'ethers';
 import { useAccount } from 'wagmi';
 import { getProviderAndSigner } from '../services/walletService.js';
 import { HACKATHON_ABI } from '../config/contractABI.js';
+import { getContractsByProvider } from '../config.js';
+import { getCurrentContracts, NETWORKS } from '../config.js';
 
 export default function SponsorModal({ isOpen, onClose, event, onSuccess }) {
   const { address } = useAccount();
   const [sponsorForm, setSponsorForm] = useState({ name: '', amount: '' });
   const [sponsoring, setSponsoring] = useState(false);
   const [walletBalance, setWalletBalance] = useState('0');
-
-  const HACKATHON_CONTRACT_ADDRESS = import.meta.env.VITE_HACKATHON_CONTRACT_ADDRESS;
 
   useEffect(() => {
     if (isOpen && address) {
@@ -43,6 +43,15 @@ export default function SponsorModal({ isOpen, onClose, event, onSuccess }) {
     try {
       setSponsoring(true);
       const { signer, provider } = await getProviderAndSigner();
+      
+      // Get contract address for current network
+      const contracts = await getContractsByProvider(provider);
+      const HACKATHON_CONTRACT_ADDRESS = contracts.HACKATHON_ADDRESS;
+      
+      if (!HACKATHON_CONTRACT_ADDRESS) {
+        alert('Contract not deployed on this network. Please switch to Monad or Mantle network.');
+        return;
+      }
       
       // Check wallet balance
       const balance = await provider.getBalance(address);

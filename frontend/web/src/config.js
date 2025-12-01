@@ -28,8 +28,8 @@ export const NETWORKS = {
     },
     blockExplorerUrls: ['https://explorer.somnia.network'],
     contracts: {
-      HACKATHON_ADDRESS: '', // Deploy contract and update
-      NFT_TICKET_ADDRESS: '', // Deploy contract and update
+      HACKATHON_ADDRESS: '0x2Dd9Fa8b7820Dff85e814bCB8a53f48e5374dE9D',
+      NFT_TICKET_ADDRESS: '0x3569Cb42f0706d5bD50dd06cA58563c9354fE5A2',
     }
   },
   mantle: {
@@ -70,6 +70,30 @@ export function getCurrentContracts() {
     );
     return network ? network.contracts : NETWORKS[DEFAULT_NETWORK].contracts;
   }
+  return NETWORKS[DEFAULT_NETWORK].contracts;
+}
+
+/**
+ * 根据 provider 获取当前网络的合约地址
+ * @param {ethers.Provider} provider - Ethers provider instance
+ * @returns {Promise<{HACKATHON_ADDRESS: string, NFT_TICKET_ADDRESS: string}>}
+ */
+export async function getContractsByProvider(provider) {
+  try {
+    const network = await provider.getNetwork();
+    const chainId = network.chainId;
+    
+    const networkEntry = Object.values(NETWORKS).find(
+      config => BigInt(config.chainIdDecimal) === chainId
+    );
+    
+    if (networkEntry) {
+      return networkEntry.contracts;
+    }
+  } catch (error) {
+    console.error('Error getting contracts by provider:', error);
+  }
+  
   return NETWORKS[DEFAULT_NETWORK].contracts;
 }
 

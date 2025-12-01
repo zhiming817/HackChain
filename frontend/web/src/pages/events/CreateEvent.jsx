@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers';
 import { getProviderAndSigner } from '../../services/walletService.js';
 import { HACKATHON_ABI } from '../../config/contractABI.js';
+import { getCurrentContracts, NETWORKS } from '../../config.js';
 import Navbar from '../../layout/Navbar.jsx';
 import Footer from '../../layout/Footer.jsx';
 
@@ -76,14 +77,32 @@ export default function CreateEvent() {
     try {
       console.log('🎭 Creating event with data:', formData);
 
-      // 获取 provider 和 signer（自动切换到 Somnia 网络）
+      // 获取 provider 和 signer
       const { provider, signer } = await getProviderAndSigner();
 
-      // 获取合约地址
-      const contractAddress = import.meta.env.VITE_HACKATHON_CONTRACT_ADDRESS;
-      if (!contractAddress) {
-        throw new Error('Contract address not configured in .env');
+      // 获取当前网络的 Chain ID
+      const network = await provider.getNetwork();
+      const chainId = network.chainId;
+      console.log('📡 Current network chain ID:', chainId.toString());
+
+      // 根据 Chain ID 获取对应的合约地址
+      const networkEntry = Object.entries(NETWORKS).find(
+        ([_, config]) => BigInt(config.chainIdDecimal) === chainId
+      );
+
+      if (!networkEntry) {
+        throw new Error(`Unsupported network. Chain ID: ${chainId}. Please switch to Monad, Mantle, or Somnia network.`);
       }
+
+      const [networkKey, networkConfig] = networkEntry;
+      const contractAddress = networkConfig.contracts.HACKATHON_ADDRESS;
+
+      if (!contractAddress) {
+        throw new Error(`Contract not deployed on ${networkConfig.chainName}. Please deploy the contract first or switch to another network.`);
+      }
+
+      console.log('🌐 Network:', networkConfig.chainName);
+      console.log('📝 Contract address:', contractAddress);
 
       // 验证合约地址格式
       if (!ethers.isAddress(contractAddress)) {
@@ -91,13 +110,12 @@ export default function CreateEvent() {
       }
 
       const signerAddress = await signer.getAddress();
-      console.log('📝 Contract address:', contractAddress);
       console.log('📝 Signer address:', signerAddress);
 
       // 检查合约是否存在
       const code = await provider.getCode(contractAddress);
       if (code === '0x') {
-        throw new Error('No contract code at address - contract may not be deployed');
+        throw new Error(`No contract deployed at ${contractAddress} on ${networkConfig.chainName}. Please deploy the contract first.`);
       }
       console.log('✅ Contract code found');
 
@@ -164,9 +182,13 @@ export default function CreateEvent() {
       } else if (err.message?.includes('Start time must be before end time')) {
         errorMessage = 'Start time must be before end time';
       } else if (err.message?.includes('Invalid contract address')) {
-        errorMessage = 'Invalid contract address. Please check .env configuration';
-      } else if (err.message?.includes('No contract code')) {
-        errorMessage = 'Contract not deployed at this address';
+        errorMessage = 'Invalid contract address. Please check configuration';
+      } else if (err.message?.includes('No contract deployed') || err.message?.includes('No contract code')) {
+        errorMessage = err.message;
+      } else if (err.message?.includes('Unsupported network')) {
+        errorMessage = err.message;
+      } else if (err.message?.includes('Contract not deployed on')) {
+        errorMessage = err.message;
       } else if (err.reason) {
         errorMessage = `Contract error: ${err.reason}`;
       } else if (err.message) {
@@ -194,7 +216,7 @@ export default function CreateEvent() {
         <div className="bg-white rounded-2xl shadow-xl border-2 border-orange-200 overflow-hidden">
           <div className="bg-gradient-to-r from-orange-500 to-red-600 p-6 text-white">
             <h1 className="text-3xl font-black mb-2">📅 Create Event</h1>
-            <p className="text-orange-100">Create a new hackathon event on Somnia blockchain</p>
+            <p className="text-orange-100">Create a new hackathon event on blockchain</p>
           </div>
 
           <div className="p-8">

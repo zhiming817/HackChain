@@ -4,6 +4,7 @@ import { useAccount } from 'wagmi';
 import { ethers } from 'ethers';
 import { getProviderAndSigner } from '../../services/walletService.js';
 import { HACKATHON_ABI } from '../../config/contractABI.js';
+import { getContractsByProvider } from '../../config.js';
 import Navbar from '../../layout/Navbar.jsx';
 import Footer from '../../layout/Footer.jsx';
 
@@ -132,12 +133,13 @@ export default function EventDetail() {
       console.log('🎭 Registering for event:', event.eventId);
 
       // get provider and signer (may switch network automatically)
-      const { signer } = await getProviderAndSigner();
+      const { signer, provider } = await getProviderAndSigner();
 
-      // get contract address
-      const contractAddress = import.meta.env.VITE_HACKATHON_CONTRACT_ADDRESS;
+      // get contract address for current network
+      const contracts = await getContractsByProvider(provider);
+      const contractAddress = contracts.HACKATHON_ADDRESS;
       if (!contractAddress) {
-        throw new Error('Contract address not configured');
+        throw new Error('Contract not deployed on this network. Please switch to Monad or Mantle network.');
       }
 
       // create contract instance

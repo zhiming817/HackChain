@@ -19,8 +19,8 @@ const Footer = () => {
               <span className="text-xl font-bold text-gray-900">HackChain</span>
             </div>
             <p className="text-gray-600 max-w-md">
-              Decentralized yield optimization protocol on Monad. 
-              Maximize your returns with automated market allocation strategies.
+              Decentralized hackathon management platform supporting multiple blockchains (EVM, SVM, Sui, Aptos). 
+              Create and manage events across different blockchain ecosystems.
             </p>
             <div className="flex space-x-4 mt-6">
               <a
@@ -70,7 +70,7 @@ const Footer = () => {
           {/* Resources */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">
-              Resources
+              Supported Networks
             </h3>
             <ul className="space-y-3">
               <li>
@@ -80,14 +80,38 @@ const Footer = () => {
                   rel="noopener noreferrer"
                   className="text-gray-600 hover:text-gray-900 transition-colors flex items-center space-x-1"
                 >
-                  <span>Monad Network</span>
+                  <span>Monad (EVM)</span>
                   <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 </a>
               </li>
-              
-              
+              <li>
+                <a
+                  href="https://www.mantle.xyz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-600 hover:text-gray-900 transition-colors flex items-center space-x-1"
+                >
+                  <span>Mantle (EVM)</span>
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://somnia.network"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-600 hover:text-gray-900 transition-colors flex items-center space-x-1"
+                >
+                  <span>Somnia (EVM)</span>
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              </li>
             </ul>
           </div>
         </div>
@@ -95,7 +119,7 @@ const Footer = () => {
         <div className="mt-8 pt-8 border-t border-gray-200">
           <div className="md:flex md:items-center md:justify-between">
             <div className="text-sm text-gray-600">
-              &copy; {currentYear} HackChain. Built on Monad Network.
+              &copy; {currentYear} HackChain. Multi-Chain Event Platform.
             </div>
             <div className="mt-4 md:mt-0">
               <div className="flex space-x-6 text-sm text-gray-600">

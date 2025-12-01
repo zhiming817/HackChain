@@ -6,6 +6,7 @@ import Navbar from '../../layout/Navbar.jsx';
 import Footer from '../../layout/Footer.jsx';
 import { HACKATHON_ABI } from '../../config/contractABI.js';
 import { getProviderAndSigner } from '../../services/walletService.js';
+import { getContractsByProvider } from '../../config.js';
 
 export default function MyEvents() {
   const navigate = useNavigate();
@@ -17,8 +18,6 @@ export default function MyEvents() {
   const [sponsorForm, setSponsorForm] = useState({ name: '', amount: '' });
   const [sponsoring, setSponsoring] = useState(false);
   const [walletBalance, setWalletBalance] = useState('0');
-
-  const HACKATHON_CONTRACT_ADDRESS = import.meta.env.VITE_HACKATHON_CONTRACT_ADDRESS;
 
   useEffect(() => {
     if (isConnected) {
@@ -134,6 +133,15 @@ export default function MyEvents() {
         const balanceInMon = ethers.formatEther(balance);
         const neededInMon = ethers.formatEther(totalNeeded);
         alert(`Insufficient balance!\nCurrent balance: ${parseFloat(balanceInMon).toFixed(4)} MON\nRequired: ${parseFloat(neededInMon).toFixed(4)} MON (including gas)\n\nPlease top up your wallet with MON tokens.`);
+        return;
+      }
+      
+      // Get contract address for current network
+      const contracts = await getContractsByProvider(provider);
+      const HACKATHON_CONTRACT_ADDRESS = contracts.HACKATHON_ADDRESS;
+      
+      if (!HACKATHON_CONTRACT_ADDRESS) {
+        alert('Contract not deployed on this network. Please switch to Monad or Mantle network.');
         return;
       }
       

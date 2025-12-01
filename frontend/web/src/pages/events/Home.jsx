@@ -41,7 +41,7 @@ export default function Home() {
             </p>
             
             <p className="text-xl md:text-2xl mb-12 text-gray-700 max-w-3xl mx-auto drop-shadow-sm leading-relaxed">
-              A decentralized event and ticketing platform powered by Monad smart contracts.
+              A decentralized event and ticketing platform supporting multiple blockchains (EVM, SVM, Sui, Aptos).
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -124,7 +124,7 @@ export default function Home() {
                     <p className="text-2xl font-bold text-orange-700">NFT Ticketing</p>
                   </div>
                   <p className="text-lg text-gray-700 ml-12">
-                    Verifiable, encrypted NFT tickets on Monad with true ownership and transferability.
+                    Verifiable, encrypted NFT tickets on multiple blockchains with true ownership and transferability.
                   </p>
                 </div>
                 <div className="bg-white/80 rounded-lg p-6 border-2 border-orange-300">
@@ -308,17 +308,17 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                 </svg>
                 <h2 className="text-4xl md:text-5xl font-black text-yellow-400">
-                  Powered By Monad
+                  Multi-Chain Powered
                 </h2>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="bg-white/10 backdrop-blur rounded-lg p-6 border-2 border-white/20">
                   <div className="flex items-center gap-3 mb-3">
                     <span className="text-3xl">⛓️</span>
-                    <h3 className="text-2xl font-bold text-yellow-300">Monad</h3>
+                    <h3 className="text-2xl font-bold text-yellow-300">Multi-Chain Support</h3>
                   </div>
                   <p className="text-white/90 text-lg">
-                    Fast, secure smart contracts and NFT primitives powered by Monad for tickets and HackChainnce.
+                    Deploy on EVM chains (Ethereum, Polygon, Monad, Mantle, Somnia), Solana/SVM, Sui, and Aptos.
                   </p>
                 </div>
                 <div className="bg-white/10 backdrop-blur rounded-lg p-6 border-2 border-white/20">
@@ -341,11 +341,11 @@ export default function Home() {
                 </div>
                 <div className="bg-white/10 backdrop-blur rounded-lg p-6 border-2 border-white/20">
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="text-3xl">🔑</span>
-                    <h3 className="text-2xl font-bold text-yellow-300">ZkLogin</h3>
+                    <span className="text-3xl">🎫</span>
+                    <h3 className="text-2xl font-bold text-yellow-300">NFT Standards</h3>
                   </div>
                   <p className="text-white/90 text-lg">
-                    Privacy-preserving authentication for easy onboarding
+                    Support for ERC721, SPL Token, Sui objects, and Aptos tokens for tickets.
                   </p>
                 </div>
               </div>
